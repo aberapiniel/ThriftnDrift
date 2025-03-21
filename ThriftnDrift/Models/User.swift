@@ -1,0 +1,69 @@
+import Foundation
+import FirebaseAuth
+import FirebaseFirestore
+
+struct User: Identifiable, Codable {
+    let id: String
+    let email: String
+    let displayName: String?
+    let isAdmin: Bool
+    var storeSubmissions: [String] // IDs of submitted stores
+    let createdAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case displayName
+        case isAdmin
+        case storeSubmissions
+        case createdAt
+    }
+    
+    init(id: String, email: String, displayName: String? = nil, isAdmin: Bool = false, storeSubmissions: [String] = [], createdAt: Date = Date()) {
+        self.id = id
+        self.email = email
+        self.displayName = displayName
+        self.isAdmin = isAdmin
+        self.storeSubmissions = storeSubmissions
+        self.createdAt = createdAt
+    }
+    
+    // Create from Firebase User
+    init?(from firebaseUser: FirebaseAuth.User) {
+        self.id = firebaseUser.uid
+        self.email = firebaseUser.email ?? ""
+        self.displayName = firebaseUser.displayName
+        self.isAdmin = false // Default to false, will be updated from Firestore
+        self.storeSubmissions = []
+        self.createdAt = Date()
+    }
+    
+    // Create from Firestore document
+    init?(from document: DocumentSnapshot) {
+        guard 
+            let data = document.data(),
+            let email = data["email"] as? String,
+            let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
+        else {
+            return nil
+        }
+        
+        self.id = document.documentID
+        self.email = email
+        self.displayName = data["displayName"] as? String
+        self.isAdmin = data["isAdmin"] as? Bool ?? false
+        self.storeSubmissions = data["storeSubmissions"] as? [String] ?? []
+        self.createdAt = createdAt
+    }
+    
+    // Convert to Firestore data
+    var firestoreData: [String: Any] {
+        [
+            "email": email,
+            "displayName": displayName ?? "",
+            "isAdmin": isAdmin,
+            "storeSubmissions": storeSubmissions,
+            "createdAt": Timestamp(date: createdAt)
+        ]
+    }
+} 

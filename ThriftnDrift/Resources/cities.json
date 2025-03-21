@@ -1,0 +1,243 @@
+{
+  "states": {
+    "NC": {
+      "name": "North Carolina",
+      "cities": [
+        {
+          "id": "charlotte-nc",
+          "name": "Charlotte",
+          "description": "Charlotte's thrift scene offers everything from high-end consignment shops to budget-friendly thrift stores, with a growing vintage market.",
+          "coordinate": {
+            "latitude": 35.2271,
+            "longitude": -80.8431
+          },
+          "imageUrl": "charlotte_skyline",
+          "tags": ["Upscale", "Consignment", "Vintage"]
+        },
+        {
+          "id": "raleigh-nc",
+          "name": "Raleigh",
+          "description": "The capital city of North Carolina features a diverse thrifting scene with numerous Goodwill locations, independent thrift stores, and vintage boutiques.",
+          "coordinate": {
+            "latitude": 35.7796,
+            "longitude": -78.6382
+          },
+          "imageUrl": "raleigh_skyline",
+          "tags": ["Urban", "Vintage", "Boutiques"]
+        },
+        {
+          "id": "durham-nc",
+          "name": "Durham",
+          "description": "Durham's thrift stores reflect its diverse community, with a mix of charitable shops, vintage boutiques, and eco-friendly resale stores.",
+          "coordinate": {
+            "latitude": 35.9940,
+            "longitude": -78.8986
+          },
+          "imageUrl": "durham_skyline",
+          "tags": ["Eco-Friendly", "Diverse", "Local"]
+        },
+        {
+          "id": "greensboro-nc",
+          "name": "Greensboro",
+          "description": "Greensboro's thrift scene includes large charitable stores, college-focused resale shops, and specialty vintage boutiques.",
+          "coordinate": {
+            "latitude": 36.0726,
+            "longitude": -79.7920
+          },
+          "imageUrl": "greensboro_skyline",
+          "tags": ["College", "Affordable", "Diverse"]
+        }
+      ]
+    },
+    "SC": {
+      "name": "South Carolina",
+      "cities": [
+        {
+          "id": "charleston-sc",
+          "name": "Charleston",
+          "description": "Charleston's historic district houses unique antique shops and upscale consignment stores, while the surrounding areas offer affordable thrift options.",
+          "coordinate": {
+            "latitude": 32.7765,
+            "longitude": -79.9311
+          },
+          "imageUrl": "charleston_skyline",
+          "tags": ["Historic", "Antique", "Upscale"]
+        },
+        {
+          "id": "columbia-sc",
+          "name": "Columbia",
+          "description": "Columbia's thrift stores cater to college students and families, offering a mix of vintage clothing, furniture, and household items.",
+          "coordinate": {
+            "latitude": 34.0007,
+            "longitude": -81.0348
+          },
+          "imageUrl": "columbia_skyline",
+          "tags": ["College", "Family", "Affordable"]
+        },
+        {
+          "id": "greenville-sc",
+          "name": "Greenville",
+          "description": "Greenville's growing thrift scene features boutique consignment shops and large thrift stores with frequent sales and rotating inventory.",
+          "coordinate": {
+            "latitude": 34.8526,
+            "longitude": -82.3940
+          },
+          "imageUrl": "greenville_skyline",
+          "tags": ["Boutique", "Modern", "Local"]
+        }
+      ]
+    },
+    "GA": {
+      "name": "Georgia",
+      "cities": [
+        {
+          "id": "atlanta-ga",
+          "name": "Atlanta",
+          "description": "Atlanta's diverse thrift scene includes trendy vintage boutiques, massive discount stores, and high-end consignment shops in Buckhead.",
+          "coordinate": {
+            "latitude": 33.7490,
+            "longitude": -84.3880
+          },
+          "imageUrl": "atlanta_skyline",
+          "tags": ["Urban", "Trendy", "Diverse"]
+        },
+        {
+          "id": "savannah-ga",
+          "name": "Savannah",
+          "description": "Savannah's thrift stores blend Southern charm with vintage finds, featuring antique shops and eclectic boutiques in the historic district.",
+          "coordinate": {
+            "latitude": 32.0809,
+            "longitude": -81.0912
+          },
+          "imageUrl": "savannah_skyline",
+          "tags": ["Historic", "Vintage", "Charming"]
+        },
+        {
+          "id": "athens-ga",
+          "name": "Athens",
+          "description": "Athens offers a vibrant thrift scene influenced by its college culture, with indie boutiques and affordable secondhand stores.",
+          "coordinate": {
+            "latitude": 33.9519,
+            "longitude": -83.3576
+          },
+          "imageUrl": "athens_skyline",
+          "tags": ["College", "Indie", "Affordable"]
+        }
+      ]
+    },
+    "FL": {
+      "name": "Florida",
+      "cities": [
+        {
+          "id": "miami-fl",
+          "name": "Miami",
+          "description": "Miami's thrift scene is as colorful as the city itself, featuring luxury consignment shops, vintage boutiques, and beachwear resale stores.",
+          "coordinate": {
+            "latitude": 25.7617,
+            "longitude": -80.1918
+          },
+          "imageUrl": "miami_skyline",
+          "tags": ["Luxury", "Beach", "Trendy"]
+        },
+        {
+          "id": "orlando-fl",
+          "name": "Orlando",
+          "description": "Orlando's thrift stores offer everything from tourist-area bargains to local vintage shops and family-friendly discount stores.",
+          "coordinate": {
+            "latitude": 28.5383,
+            "longitude": -81.3792
+          },
+          "imageUrl": "orlando_skyline",
+          "tags": ["Tourist", "Family", "Bargain"]
+        },
+        {
+          "id": "tampa-fl",
+          "name": "Tampa",
+          "description": "Tampa's thrift scene combines coastal casual with urban style, featuring beach-themed resale shops and trendy vintage stores.",
+          "coordinate": {
+            "latitude": 27.9506,
+            "longitude": -82.4572
+          },
+          "imageUrl": "tampa_skyline",
+          "tags": ["Coastal", "Urban", "Casual"]
+        }
+      ]
+    },
+    "TN": {
+      "name": "Tennessee",
+      "cities": [
+        {
+          "id": "nashville-tn",
+          "name": "Nashville",
+          "description": "Nashville's thrift stores reflect its music culture, with vintage western wear, instrument resale shops, and trendy boutiques.",
+          "coordinate": {
+            "latitude": 36.1627,
+            "longitude": -86.7816
+          },
+          "imageUrl": "nashville_skyline",
+          "tags": ["Music", "Western", "Trendy"]
+        },
+        {
+          "id": "memphis-tn",
+          "name": "Memphis",
+          "description": "Memphis offers a mix of soul and style in its thrift scene, with vintage record shops, retro clothing stores, and affordable family outlets.",
+          "coordinate": {
+            "latitude": 35.1495,
+            "longitude": -90.0490
+          },
+          "imageUrl": "memphis_skyline",
+          "tags": ["Soul", "Retro", "Affordable"]
+        },
+        {
+          "id": "knoxville-tn",
+          "name": "Knoxville",
+          "description": "Knoxville's thrift stores combine mountain charm with college town energy, featuring outdoor gear resale and vintage boutiques.",
+          "coordinate": {
+            "latitude": 35.9606,
+            "longitude": -83.9207
+          },
+          "imageUrl": "knoxville_skyline",
+          "tags": ["Mountain", "College", "Outdoor"]
+        }
+      ]
+    },
+    "VA": {
+      "name": "Virginia",
+      "cities": [
+        {
+          "id": "richmond-va",
+          "name": "Richmond",
+          "description": "Richmond's thrift scene is known for its artistic flair, with vintage clothing stores, antique markets, and creative reuse centers.",
+          "coordinate": {
+            "latitude": 37.5407,
+            "longitude": -77.4360
+          },
+          "imageUrl": "richmond_skyline",
+          "tags": ["Artistic", "Vintage", "Creative"]
+        },
+        {
+          "id": "virginia-beach-va",
+          "name": "Virginia Beach",
+          "description": "Virginia Beach combines coastal style with military influence in its thrift stores, offering beachwear, uniforms, and family essentials.",
+          "coordinate": {
+            "latitude": 36.8529,
+            "longitude": -75.9780
+          },
+          "imageUrl": "virginia_beach_skyline",
+          "tags": ["Beach", "Military", "Family"]
+        },
+        {
+          "id": "norfolk-va",
+          "name": "Norfolk",
+          "description": "Norfolk's thrift scene serves its naval community with military surplus stores, nautical antiques, and affordable family shops.",
+          "coordinate": {
+            "latitude": 36.8508,
+            "longitude": -76.2859
+          },
+          "imageUrl": "norfolk_skyline",
+          "tags": ["Naval", "Nautical", "Military"]
+        }
+      ]
+    }
+  }
+} 
