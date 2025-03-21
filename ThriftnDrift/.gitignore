@@ -90,4 +90,18 @@ iOSInjectionProject/
 
 # API Keys and Sensitive Information
 GoogleService-Info.plist
-places_api.txt 
+places_api.txt
+**/places_api.txt
+.env
+**/.env
+*.env
+*api_key*
+*apikey*
+*secret*
+*credentials*
+
+# Environment files
+.env.local
+.env.development
+.env.test
+.env.production 
