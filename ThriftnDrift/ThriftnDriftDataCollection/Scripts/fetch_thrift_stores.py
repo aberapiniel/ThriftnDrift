@@ -7,6 +7,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 import googlemaps
 from tqdm import tqdm
+from cities_config import STATES
 
 # Load environment variables
 load_dotenv()
@@ -15,154 +16,6 @@ print(f"API Key loaded: {'*' * (len(GOOGLE_API_KEY) - 8) + GOOGLE_API_KEY[-8:] i
 
 # Initialize Google Maps client
 gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
-
-# States and their major cities
-STATES = {
-    "NC": {
-        "name": "North Carolina",
-        "cities": [
-            {
-                "name": "Charlotte",
-                "lat": 35.2271,
-                "lng": -80.8431,
-                "radius": 50000
-            },
-            {
-                "name": "Raleigh",
-                "lat": 35.7796,
-                "lng": -78.6382,
-                "radius": 50000
-            },
-            {
-                "name": "Durham",
-                "lat": 35.9940,
-                "lng": -78.8986,
-                "radius": 50000
-            },
-            {
-                "name": "Greensboro",
-                "lat": 36.0726,
-                "lng": -79.7920,
-                "radius": 50000
-            }
-        ]
-    },
-    "SC": {
-        "name": "South Carolina",
-        "cities": [
-            {
-                "name": "Charleston",
-                "lat": 32.7765,
-                "lng": -79.9311,
-                "radius": 50000
-            },
-            {
-                "name": "Columbia",
-                "lat": 34.0007,
-                "lng": -81.0348,
-                "radius": 50000
-            },
-            {
-                "name": "Greenville",
-                "lat": 34.8526,
-                "lng": -82.3940,
-                "radius": 50000
-            }
-        ]
-    },
-    "GA": {
-        "name": "Georgia",
-        "cities": [
-            {
-                "name": "Atlanta",
-                "lat": 33.7490,
-                "lng": -84.3880,
-                "radius": 50000
-            },
-            {
-                "name": "Savannah",
-                "lat": 32.0809,
-                "lng": -81.0912,
-                "radius": 50000
-            },
-            {
-                "name": "Athens",
-                "lat": 33.9519,
-                "lng": -83.3576,
-                "radius": 50000
-            }
-        ]
-    },
-    "FL": {
-        "name": "Florida",
-        "cities": [
-            {
-                "name": "Miami",
-                "lat": 25.7617,
-                "lng": -80.1918,
-                "radius": 50000
-            },
-            {
-                "name": "Orlando",
-                "lat": 28.5383,
-                "lng": -81.3792,
-                "radius": 50000
-            },
-            {
-                "name": "Tampa",
-                "lat": 27.9506,
-                "lng": -82.4572,
-                "radius": 50000
-            }
-        ]
-    },
-    "TN": {
-        "name": "Tennessee",
-        "cities": [
-            {
-                "name": "Nashville",
-                "lat": 36.1627,
-                "lng": -86.7816,
-                "radius": 50000
-            },
-            {
-                "name": "Memphis",
-                "lat": 35.1495,
-                "lng": -90.0490,
-                "radius": 50000
-            },
-            {
-                "name": "Knoxville",
-                "lat": 35.9606,
-                "lng": -83.9207,
-                "radius": 50000
-            }
-        ]
-    },
-    "VA": {
-        "name": "Virginia",
-        "cities": [
-            {
-                "name": "Richmond",
-                "lat": 37.5407,
-                "lng": -77.4360,
-                "radius": 50000
-            },
-            {
-                "name": "Virginia Beach",
-                "lat": 36.8529,
-                "lng": -75.9780,
-                "radius": 50000
-            },
-            {
-                "name": "Norfolk",
-                "lat": 36.8508,
-                "lng": -76.2859,
-                "radius": 50000
-            }
-        ]
-    }
-}
 
 def get_place_details(place_id: str) -> Dict[Any, Any]:
     """Get detailed information about a place using its place_id."""
@@ -227,7 +80,6 @@ def search_thrift_stores(city: Dict[str, Any]) -> List[Dict[str, Any]]:
                     'reviewCount': details.get('user_ratings_total', 0),
                     'priceRange': '$' * (details.get('price_level', 1) if details.get('price_level') else 1),
                     'categories': details.get('types', []),
-                    'acceptsDonations': True,  # Default assumption for thrift stores
                     'hasClothingSection': True,  # Default assumption
                     'hasFurnitureSection': False,
                     'hasElectronicsSection': False,
@@ -274,7 +126,6 @@ def search_thrift_stores(city: Dict[str, Any]) -> List[Dict[str, Any]]:
                         'reviewCount': details.get('user_ratings_total', 0),
                         'priceRange': '$' * (details.get('price_level', 1) if details.get('price_level') else 1),
                         'categories': details.get('types', []),
-                        'acceptsDonations': True,
                         'hasClothingSection': True,
                         'hasFurnitureSection': False,
                         'hasElectronicsSection': False,

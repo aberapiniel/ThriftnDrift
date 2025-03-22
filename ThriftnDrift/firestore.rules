@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    function isStoreOwner(storeId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/stores/$(storeId)) &&
+        get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid;
+    }
+    
+    // Admins collection
+    match /admins/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();  // Only existing admins can modify the admins collection
+    }
+    
+    // Verified stores collection
+    match /stores/{storeId} {
+      allow read: if true;  // Anyone can read verified stores
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isStoreOwner(storeId);
+      allow delete: if isAdmin();
+    }
+    
+    // Store submissions collection
+    match /store_submissions/{submissionId} {
+      allow read: if true;  // Anyone can view submissions
+      allow create: if isAuthenticated();  // Must be logged in to submit
+      allow update, delete: if isAdmin() || 
+        (isAuthenticated() && resource.data.submittedBy == request.auth.uid);
+    }
+    
+    // Store photo submissions collection
+    match /store_photo_submissions/{submissionId} {
+      allow read: if true;  // Anyone can view photo submissions
+      allow create: if isAuthenticated();  // Must be logged in to submit photos
+      allow update: if isAdmin();  // Only admins can update (approve/reject)
+      allow delete: if isAdmin() || 
+        (isAuthenticated() && resource.data.submittedBy == request.auth.uid);
+    }
+    
+    // City requests collection
+    match /city_requests/{requestId} {
+      allow read: if isAuthenticated();  // Allow any authenticated user to read
+      allow create: if isAuthenticated() && 
+        request.resource.data.requestedBy == request.auth.uid && 
+        request.resource.data.status == "pending";
+      allow update: if isAdmin();
+      allow delete: if isAuthenticated() && 
+        resource.data.requestedBy == request.auth.uid && 
+        resource.data.status == "pending";
+    }
+    
+    // User profiles
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+} 

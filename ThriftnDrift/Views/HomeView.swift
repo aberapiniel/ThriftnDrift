@@ -2,11 +2,11 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
+    @EnvironmentObject private var userService: UserService
     @State private var selectedTab = 0
     @State private var isAnimating = false
     @State private var showSubmitStore = false
     @State private var selectedCategory: String?
-    @StateObject private var userService = UserService.shared
     
     private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
@@ -37,21 +37,32 @@ struct HomeView: View {
                 .tag(3)
             
             if userService.isAdmin {
-                AdminView()
-                    .tabItem {
-                        Label("Admin", systemImage: "shield")
-                    }
-                    .tag(4)
+                NavigationView {
+                    AdminView()
+                }
+                .tabItem {
+                    Label("Admin", systemImage: "shield")
+                }
+                .tag(4)
             }
             
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person")
                 }
-                .tag(5)
+                .tag(userService.isAdmin ? 5 : 4)
         }
         .sheet(isPresented: $showSubmitStore) {
             SubmitStoreView()
+        }
+        .onAppear {
+            print("🏠 HomeView appeared, isAdmin: \(userService.isAdmin)")
+            withAnimation(.easeOut(duration: 0.5)) {
+                isAnimating = true
+            }
+        }
+        .onDisappear {
+            isAnimating = false
         }
     }
     
@@ -161,14 +172,6 @@ struct HomeView: View {
             .padding(.horizontal, 24)
         }
         .navigationBarHidden(true)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.5)) {
-                isAnimating = true
-            }
-        }
-        .onDisappear {
-            isAnimating = false
-        }
     }
     
     private var timeOfDay: String {

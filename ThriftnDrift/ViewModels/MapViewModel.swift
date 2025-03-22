@@ -96,8 +96,14 @@ class MapViewModel: NSObject, ObservableObject {
         selectedState = stateCode
         isLoading = true
         
-        // Switch state in service
+        // Clear existing stores first
+        stores = []
+        
+        // Switch state in service and wait for stores to load
         storeService.switchToState(stateCode)
+        
+        // Add a small delay to ensure UI updates
+        try? await Task.sleep(nanoseconds: 300_000_000)
         
         isLoading = false
     }
@@ -128,7 +134,7 @@ class MapViewModel: NSObject, ObservableObject {
             longitudeDelta: (maxLon - minLon) * 1.5
         )
         
-        withAnimation {
+        withAnimation(.easeInOut(duration: 0.5)) {
             region = MKCoordinateRegion(center: center, span: span)
         }
     }

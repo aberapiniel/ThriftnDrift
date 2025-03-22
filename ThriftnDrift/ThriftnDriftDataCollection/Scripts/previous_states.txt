@@ -1,0 +1,32 @@
+Previously Fetched States and Cities:
+
+North Carolina (NC):
+- Charlotte
+- Raleigh
+- Durham
+- Greensboro
+
+South Carolina (SC):
+- Charleston
+- Columbia
+- Greenville
+
+Georgia (GA):
+- Atlanta
+- Savannah
+- Athens
+
+Florida (FL):
+- Miami
+- Orlando
+- Tampa
+
+Tennessee (TN):
+- Nashville
+- Memphis
+- Knoxville
+
+Virginia (VA):
+- Richmond
+- Virginia Beach
+- Norfolk 

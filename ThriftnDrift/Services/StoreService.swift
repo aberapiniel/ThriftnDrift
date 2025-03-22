@@ -2,6 +2,8 @@ import Foundation
 import CoreLocation
 import FirebaseFirestore
 import FirebaseAuth
+import FirebaseStorage
+import CommonCrypto
 
 // Store state data structure
 struct StateStores: Codable {
@@ -23,13 +25,13 @@ struct StoreData: Codable {
     let categories: [String]
     let website: String?
     let phoneNumber: String?
-    let acceptsDonations: Bool
     let hasClothingSection: Bool
     let hasFurnitureSection: Bool
     let hasElectronicsSection: Bool
     let lastVerified: Date
     let isUserSubmitted: Bool
     let verificationStatus: String
+    let imageAttribution: String?  // Add imageAttribution field
     
     // Convert JSON data to Store model
     func toStore(state: String) -> Store? {
@@ -69,13 +71,13 @@ struct StoreData: Codable {
             latitude: latitude,
             longitude: longitude,
             imageUrls: [],
+            imageAttribution: imageAttribution,
             rating: rating,
             reviewCount: reviewCount,
             priceRange: priceRange,
             categories: categories,
             website: website,
             phoneNumber: phoneNumber,
-            acceptsDonations: acceptsDonations,
             hasClothingSection: hasClothingSection,
             hasFurnitureSection: hasFurnitureSection,
             hasElectronicsSection: hasElectronicsSection,
@@ -191,13 +193,33 @@ class StoreService: ObservableObject {
                 return
             }
             
-            let newFirestoreStores = snapshot?.documents.compactMap { document -> Store? in
-                try? document.data(as: Store.self)
-            } ?? []
-            
-            print("📦 Received \(newFirestoreStores.count) verified stores from Firestore")
-            self.firestoreStores = newFirestoreStores
-            self.updateStoresList()
+            Task {
+                var newFirestoreStores: [Store] = []
+                
+                // Process each document sequentially
+                for document in snapshot?.documents ?? [] {
+                    if var store = try? document.data(as: Store.self) {
+                        // Verify image URLs exist in storage
+                        if !store.imageUrls.isEmpty {
+                            do {
+                                let validUrls = try await self.verifyImageUrls(store.imageUrls, forStore: store.id)
+                                store.imageUrls = validUrls
+                                newFirestoreStores.append(store)
+                            } catch {
+                                print("📦 Error verifying image URLs for store \(store.id): \(error)")
+                            }
+                        } else {
+                            newFirestoreStores.append(store)
+                        }
+                    }
+                }
+                
+                await MainActor.run {
+                    print("📦 Received \(newFirestoreStores.count) verified stores from Firestore")
+                    self.firestoreStores = newFirestoreStores
+                    self.updateStoresList()
+                }
+            }
         }
         
         userSubmittedStoresListener = submissionsQuery.addSnapshotListener { [weak self] snapshot, error in
@@ -214,13 +236,33 @@ class StoreService: ObservableObject {
                 return
             }
             
-            let newSubmissions = snapshot?.documents.compactMap { document -> Store? in
-                try? document.data(as: Store.self)
-            } ?? []
-            
-            print("📦 Received \(newSubmissions.count) verified submissions from Firestore")
-            self.submissions = newSubmissions
-            self.updateStoresList()
+            Task {
+                var newSubmissions: [Store] = []
+                
+                // Process each document sequentially
+                for document in snapshot?.documents ?? [] {
+                    if var store = try? document.data(as: Store.self) {
+                        // Verify image URLs exist in storage
+                        if !store.imageUrls.isEmpty {
+                            do {
+                                let validUrls = try await self.verifyImageUrls(store.imageUrls, forStore: store.id)
+                                store.imageUrls = validUrls
+                                newSubmissions.append(store)
+                            } catch {
+                                print("📦 Error verifying image URLs for store \(store.id): \(error)")
+                            }
+                        } else {
+                            newSubmissions.append(store)
+                        }
+                    }
+                }
+                
+                await MainActor.run {
+                    print("📦 Received \(newSubmissions.count) verified submissions from Firestore")
+                    self.submissions = newSubmissions
+                    self.updateStoresList()
+                }
+            }
         }
     }
     
@@ -235,12 +277,15 @@ class StoreService: ObservableObject {
         print("📦 - Firestore stores: \(firestoreStores.count)")
         print("📦 - Submissions: \(submissions.count)")
         
-        // Combine all stores and filter by state
+        // Combine all stores and filter by state and validate coordinates
         let allStores = (jsonStores + firestoreStores + submissions)
             .filter { store in
                 // Validate coordinates
-                guard store.latitude != 0 || store.longitude != 0 else {
-                    print("📦 WARNING: Filtering out store '\(store.name)' due to invalid coordinates (0,0)")
+                guard store.latitude != 0 && store.longitude != 0 &&
+                      !store.latitude.isNaN && !store.longitude.isNaN &&
+                      store.latitude >= -90 && store.latitude <= 90 &&
+                      store.longitude >= -180 && store.longitude <= 180 else {
+                    print("📦 WARNING: Filtering out store '\(store.name)' due to invalid coordinates (\(store.latitude),\(store.longitude))")
                     return false
                 }
                 return store.state.uppercased() == selectedState.uppercased()
@@ -267,10 +312,6 @@ class StoreService: ObservableObject {
             "reviewCount": store.reviewCount,
             "priceRange": store.priceRange,
             "categories": store.categories,
-            "acceptsDonations": store.acceptsDonations,
-            "hasClothingSection": store.hasClothingSection,
-            "hasFurnitureSection": store.hasFurnitureSection,
-            "hasElectronicsSection": store.hasElectronicsSection,
             "isUserSubmitted": true,
             "verificationStatus": "pending",
             "createdAt": Date(),
@@ -351,6 +392,185 @@ class StoreService: ObservableObject {
             store.categories.contains { $0.localizedCaseInsensitiveContains(query) }
         }
     }
+    
+    // Helper function to check if an image URL already exists for a store
+    private func isDuplicateImage(_ imageUrl: String, forStore storeId: String) async throws -> Bool {
+        // Check in store document
+        let storeDoc = try await db.collection("stores").document(storeId).getDocument()
+        if let existingUrls = storeDoc.data()?["imageUrls"] as? [String],
+           existingUrls.contains(imageUrl) {
+            return true
+        }
+        
+        // Check in pending submissions
+        let pendingSubmissions = try await db.collection("store_photo_submissions")
+            .whereField("storeId", isEqualTo: storeId)
+            .whereField("status", isEqualTo: "pending")
+            .getDocuments()
+        
+        for doc in pendingSubmissions.documents {
+            if let submissionUrls = doc.data()["imageUrls"] as? [String],
+               submissionUrls.contains(imageUrl) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    // Helper function to verify image URLs exist in storage
+    private func verifyImageUrls(_ urls: [String], forStore storeId: String) async throws -> [String] {
+        var validUrls: [String] = []
+        
+        for url in urls {
+            let imageRef = Storage.storage().reference(forURL: url)
+            do {
+                _ = try await imageRef.getMetadata()
+                validUrls.append(url)
+            } catch {
+                print("📦 Image no longer exists in storage: \(url)")
+            }
+        }
+        
+        // If we found any invalid URLs, update the store document
+        if validUrls.count != urls.count {
+            try await db.collection("stores").document(storeId).updateData([
+                "imageUrls": validUrls
+            ])
+            print("📦 Updated store \(storeId) to remove \(urls.count - validUrls.count) deleted images")
+        }
+        
+        return validUrls
+    }
+    
+    // Helper function to generate MD5 hash for image data
+    private func md5Hash(_ data: Data) -> String {
+        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+        _ = data.withUnsafeBytes {
+            CC_MD5($0.baseAddress, CC_LONG(data.count), &digest)
+        }
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+    
+    // Helper function to check if an image is a duplicate in storage
+    private func isDuplicateImageInStorage(_ imageData: Data, forStore storeId: String) async throws -> Bool {
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+        let storePhotosRef = storageRef.child("store_photos/\(storeId)")
+        
+        // Get hash of the new image
+        let newImageHash = md5Hash(imageData)
+        
+        // List all images in the store's folder
+        let result = try await storePhotosRef.listAll()
+        
+        // Check each existing image
+        for item in result.items {
+            do {
+                let data = try await item.data(maxSize: 5 * 1024 * 1024) // 5MB max
+                let existingHash = md5Hash(data)
+                
+                if existingHash == newImageHash {
+                    print("📦 Found duplicate image in storage")
+                    return true
+                }
+            } catch {
+                print("📦 Error checking image \(item.name): \(error)")
+                continue
+            }
+        }
+        
+        return false
+    }
+    
+    func submitStorePhotos(storeId: String, images: [UIImage]) async throws {
+        guard !images.isEmpty else {
+            throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No images provided"])
+        }
+        
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+        
+        var imageUrls: [String] = []
+        var uploadErrors: [Error] = []
+        var duplicateCount = 0
+        
+        // Upload each image
+        for (index, image) in images.enumerated() {
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+                print("📦 Error: Could not compress image \(index)")
+                continue
+            }
+            
+            // Check if this image is a duplicate in storage
+            if try await isDuplicateImageInStorage(imageData, forStore: storeId) {
+                print("📦 Skipping duplicate image \(index + 1)")
+                duplicateCount += 1
+                continue
+            }
+            
+            let imageName = "\(UUID().uuidString)_\(index).jpg"
+            let imageRef = storageRef.child("store_photos/\(storeId)/\(imageName)")
+            
+            do {
+                let metadata = StorageMetadata()
+                metadata.contentType = "image/jpeg"
+                
+                // Upload image and get URL
+                _ = try await imageRef.putDataAsync(imageData, metadata: metadata)
+                let downloadURL = try await imageRef.downloadURL()
+                
+                imageUrls.append(downloadURL.absoluteString)
+                print("📦 Successfully uploaded image \(index + 1) of \(images.count)")
+            } catch {
+                print("📦 Error uploading image \(index): \(error)")
+                uploadErrors.append(error)
+            }
+        }
+        
+        // If no images were successfully uploaded (all were duplicates or errors)
+        if imageUrls.isEmpty {
+            if duplicateCount > 0 {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "All images were duplicates of existing photos"])
+            } else if !uploadErrors.isEmpty {
+                throw uploadErrors[0]
+            }
+            return
+        }
+        
+        // Get the store name
+        let storeDoc = try await db.collection("stores").document(storeId).getDocument()
+        let storeName = storeDoc.data()?["name"] as? String ?? "Unknown Store"
+        
+        // Get the user's display name
+        let currentUser = Auth.auth().currentUser
+        let userDoc = try? await db.collection("users").document(currentUser?.uid ?? "").getDocument()
+        let submitterName = userDoc?.data()?["displayName"] as? String ?? currentUser?.displayName
+        
+        // Create photo submission document
+        let submission = [
+            "storeId": storeId,
+            "storeName": storeName,
+            "imageUrls": imageUrls,
+            "status": "pending",
+            "submittedBy": currentUser?.uid ?? "anonymous",
+            "submitterName": submitterName,
+            "submittedAt": Timestamp(date: Date()),
+            "reviewedAt": nil as Timestamp?,
+            "reviewedBy": nil as String?
+        ] as [String : Any]
+        
+        // Only create submission if we have non-duplicate images
+        if !imageUrls.isEmpty {
+            try await db.collection("store_photo_submissions").document().setData(submission)
+            
+            if duplicateCount > 0 {
+                print("📦 Successfully submitted \(imageUrls.count) photos for store \(storeId) (\(duplicateCount) duplicates skipped)")
+            } else {
+                print("📦 Successfully submitted \(imageUrls.count) photos for store \(storeId)")
+            }
+        }
+    }
 }
 
 // Helper extension for Store model
@@ -368,11 +588,6 @@ extension Store {
             "reviewCount": reviewCount,
             "priceRange": priceRange,
             "categories": categories,
-            "acceptsDonations": acceptsDonations,
-            "hasClothingSection": hasClothingSection,
-            "hasFurnitureSection": hasFurnitureSection,
-            "hasElectronicsSection": hasElectronicsSection,
-            "lastVerified": lastVerified ?? Date(),
             "isUserSubmitted": true,
             "verificationStatus": "pending",
             "createdAt": Date(),

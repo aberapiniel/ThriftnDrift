@@ -29,22 +29,58 @@ class UserService: ObservableObject {
     
     private func fetchUserData(for firebaseUser: FirebaseAuth.User) async {
         do {
+            print("🔍 Fetching user data for: \(firebaseUser.email ?? "unknown")")
+            
+            // Fetch user data
             let docSnapshot = try await db.collection("users").document(firebaseUser.uid).getDocument()
             
             if let user = User(from: docSnapshot) {
                 currentUser = user
-                isAdmin = user.isAdmin
+                print("✅ Found existing user: \(user.email)")
             } else {
                 // Create new user document if it doesn't exist
                 let newUser = User(from: firebaseUser)
                 if let user = newUser {
                     try await createNewUser(user)
                     currentUser = user
-                    isAdmin = user.isAdmin
+                    print("✅ Created new user: \(user.email)")
                 }
             }
+            
+            // Check admin status
+            print("🔑 Checking admin status for user ID: \(firebaseUser.uid)")
+            do {
+                let adminDoc = try await db.collection("admins").document(firebaseUser.uid).getDocument()
+                isAdmin = adminDoc.exists
+                print(adminDoc.exists ? "👑 User is an admin" : "👤 User is not an admin")
+                
+                if adminDoc.exists {
+                    print("📄 Admin document data: \(adminDoc.data() ?? [:])")
+                }
+            } catch let error as NSError {
+                if error.domain == "FIRFirestoreErrorDomain" && error.code == 7 {
+                    print("⚠️ Permission denied accessing admin status. Please update Firestore rules.")
+                    print("ℹ️ Required Firestore rules:")
+                    print("""
+                    match /databases/{database}/documents {
+                      match /users/{userId} {
+                        allow read, write: if request.auth != null && request.auth.uid == userId;
+                      }
+                      match /admins/{userId} {
+                        allow read: if request.auth != null;
+                        allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+                      }
+                    }
+                    """)
+                    isAdmin = false
+                } else {
+                    throw error
+                }
+            }
+            
         } catch {
-            print("Error fetching user data: \(error)")
+            print("❌ Error fetching user data: \(error)")
+            isAdmin = false
         }
     }
     
@@ -56,12 +92,19 @@ class UserService: ObservableObject {
     
     func makeUserAdmin(userId: String) async throws {
         guard isAdmin else { throw UserError.notAuthorized }
-        try await db.collection("users").document(userId).updateData(["isAdmin": true])
+        
+        // Add user to admins collection
+        try await db.collection("admins").document(userId).setData([
+            "userId": userId,
+            "grantedAt": Timestamp(date: Date()),
+            "grantedBy": Auth.auth().currentUser?.uid ?? "unknown",
+            "role": "superAdmin"
+        ])
     }
     
     func removeAdminStatus(userId: String) async throws {
         guard isAdmin else { throw UserError.notAuthorized }
-        try await db.collection("users").document(userId).updateData(["isAdmin": false])
+        try await db.collection("admins").document(userId).delete()
     }
     
     func getSubmissionsByUser(userId: String) async throws -> [Store] {

@@ -24,6 +24,7 @@ struct Store: Identifiable, Codable, Equatable {
     let latitude: Double
     let longitude: Double
     var imageUrls: [String]
+    var imageAttribution: String?
     var rating: Double
     var reviewCount: Int
     let priceRange: String
@@ -62,7 +63,8 @@ struct Store: Identifiable, Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, name, description
         case streetAddress, city, state, zipCode, address
-        case latitude, longitude, imageUrls, rating, reviewCount, priceRange
+        case latitude, longitude, imageUrls, imageAttribution
+        case rating, reviewCount, priceRange
         case categories, instagram, tiktok, facebook, website, phoneNumber
         case isFeatured, featuredRank, featuredUntil
         case acceptsDonations, hasClothingSection, hasFurnitureSection
@@ -117,6 +119,7 @@ struct Store: Identifiable, Codable, Equatable {
         latitude = try container.decode(Double.self, forKey: .latitude)
         longitude = try container.decode(Double.self, forKey: .longitude)
         imageUrls = try container.decodeIfPresent([String].self, forKey: .imageUrls) ?? []
+        imageAttribution = try container.decodeIfPresent(String.self, forKey: .imageAttribution)
         rating = try container.decodeIfPresent(Double.self, forKey: .rating) ?? 0
         reviewCount = try container.decodeIfPresent(Int.self, forKey: .reviewCount) ?? 0
         priceRange = try container.decodeIfPresent(String.self, forKey: .priceRange) ?? "$"
@@ -150,11 +153,12 @@ struct Store: Identifiable, Codable, Equatable {
     init(id: String, name: String, description: String, 
          streetAddress: String, city: String, state: String, zipCode: String,
          latitude: Double, longitude: Double, imageUrls: [String],
+         imageAttribution: String? = nil,
          rating: Double, reviewCount: Int, priceRange: String, categories: [String],
          instagram: String? = nil, tiktok: String? = nil, facebook: String? = nil,
          website: String? = nil, phoneNumber: String? = nil, isFeatured: Bool = false,
          featuredRank: Int? = nil, featuredUntil: Date? = nil,
-         acceptsDonations: Bool = false, hasClothingSection: Bool = true,
+         hasClothingSection: Bool = true,
          hasFurnitureSection: Bool = false, hasElectronicsSection: Bool = false,
          lastVerified: Date? = nil, isUserSubmitted: Bool = false,
          verificationStatus: String = "pending", createdAt: Date = Date(),
@@ -169,6 +173,7 @@ struct Store: Identifiable, Codable, Equatable {
         self.latitude = latitude
         self.longitude = longitude
         self.imageUrls = imageUrls
+        self.imageAttribution = imageAttribution
         self.rating = rating
         self.reviewCount = reviewCount
         self.priceRange = priceRange
@@ -181,7 +186,7 @@ struct Store: Identifiable, Codable, Equatable {
         self.isFeatured = isFeatured
         self.featuredRank = featuredRank
         self.featuredUntil = featuredUntil
-        self.acceptsDonations = acceptsDonations
+        self.acceptsDonations = false
         self.hasClothingSection = hasClothingSection
         self.hasFurnitureSection = hasFurnitureSection
         self.hasElectronicsSection = hasElectronicsSection
@@ -216,6 +221,7 @@ struct Store: Identifiable, Codable, Equatable {
         try container.encode(latitude, forKey: .latitude)
         try container.encode(longitude, forKey: .longitude)
         try container.encode(imageUrls, forKey: .imageUrls)
+        try container.encodeIfPresent(imageAttribution, forKey: .imageAttribution)
         try container.encode(rating, forKey: .rating)
         try container.encode(reviewCount, forKey: .reviewCount)
         try container.encode(priceRange, forKey: .priceRange)
@@ -261,11 +267,11 @@ extension Store {
             latitude: 37.7749,
             longitude: -122.4194,
             imageUrls: [],
+            imageAttribution: nil,
             rating: 4.2,
             reviewCount: 156,
             priceRange: "$$",
             categories: ["Clothing", "Furniture", "Books", "Electronics"],
-            acceptsDonations: true,
             hasClothingSection: true,
             hasFurnitureSection: true,
             hasElectronicsSection: true,

@@ -4,86 +4,441 @@ import MapKit
 struct AdminView: View {
     @StateObject private var viewModel = AdminViewModel()
     @State private var selectedSubmission: Store?
+    @State private var selectedPhotoSubmission: PhotoSubmission?
     @State private var showingRejectionDialog = false
     @State private var rejectionReason = ""
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var selectedTab = 0
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        VStack {
+            Picker("Admin Section", selection: $selectedTab) {
+                Text("Submissions").tag(0)
+                Text("Photos").tag(1)
+                Text("Cities").tag(2)
+                Text("Admins").tag(3)
+            }
+            .pickerStyle(.segmented)
+            .padding()
+            
+            switch selectedTab {
+            case 0:
+                submissionsView
+            case 1:
+                photoSubmissionsView
+            case 2:
+                cityRequestsView
+            default:
+                AdminManagementView()
+            }
+        }
+        .navigationTitle("Admin Dashboard")
+    }
+    
+    private var submissionsView: some View {
+        List {
+            Section {
+                ForEach(viewModel.pendingSubmissions) { submission in
+                    SubmissionRow(submission: submission) {
+                        selectedSubmission = submission
+                    }
+                }
+            } header: {
+                Text("Pending Submissions (\(viewModel.pendingSubmissions.count))")
+                    .foregroundColor(themeColor)
+            }
+            
+            Section {
+                ForEach(viewModel.recentlyApproved) { store in
+                    VStack(alignment: .leading) {
+                        Text(store.name)
+                            .font(.headline)
+                        Text("Approved")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                }
+            } header: {
+                Text("Recently Approved")
+                    .foregroundColor(themeColor)
+            }
+        }
+        .refreshable {
+            await viewModel.loadSubmissions()
+        }
+        .alert("Error", isPresented: $showingAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+        .sheet(item: $selectedSubmission) { submission in
+            SubmissionDetailView(
+                submission: submission,
+                onApprove: {
+                    Task {
+                        do {
+                            try await viewModel.approveSubmission(submission.id)
+                            selectedSubmission = nil
+                        } catch {
+                            showingAlert = true
+                            alertMessage = error.localizedDescription
+                        }
+                    }
+                },
+                onReject: { reason in
+                    Task {
+                        do {
+                            try await viewModel.rejectSubmission(submission.id, reason: reason)
+                            selectedSubmission = nil
+                        } catch {
+                            showingAlert = true
+                            alertMessage = error.localizedDescription
+                        }
+                    }
+                }
+            )
+        }
+    }
+    
+    private var photoSubmissionsView: some View {
+        List {
+            Section {
+                if viewModel.pendingPhotoSubmissions.isEmpty {
+                    Text("No pending photo submissions")
+                        .foregroundColor(.gray)
+                        .italic()
+                } else {
+                    ForEach(viewModel.pendingPhotoSubmissions) { submission in
+                        PhotoSubmissionRow(submission: submission) {
+                            selectedPhotoSubmission = submission
+                        }
+                    }
+                }
+            } header: {
+                Text("Pending Photo Submissions (\(viewModel.pendingPhotoSubmissions.count))")
+                    .foregroundColor(themeColor)
+            }
+            
+            // Recently Approved Photos Section
+            if !viewModel.recentlyApprovedPhotos.isEmpty {
+                Section {
+                    ForEach(groupPhotosByDate(viewModel.recentlyApprovedPhotos), id: \.date) { group in
+                        DisclosureGroup(
+                            content: {
+                                ForEach(group.submissions) { submission in
+                                    ApprovedPhotoRow(submission: submission)
+                                }
+                            },
+                            label: {
+                                HStack {
+                                    Text(formatDate(group.date))
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text("\(group.submissions.count) photos")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        )
+                    }
+                } header: {
+                    Text("Recently Approved")
+                        .foregroundColor(themeColor)
+                }
+            }
+        }
+        .refreshable {
+            await viewModel.loadSubmissions()
+        }
+        .sheet(item: $selectedPhotoSubmission) { submission in
+            PhotoSubmissionDetailView(
+                submission: submission,
+                onApprove: {
+                    Task {
+                        do {
+                            try await viewModel.approvePhotoSubmission(submission)
+                            selectedPhotoSubmission = nil
+                        } catch {
+                            showingAlert = true
+                            alertMessage = error.localizedDescription
+                        }
+                    }
+                },
+                onReject: {
+                    Task {
+                        do {
+                            try await viewModel.rejectPhotoSubmission(submission)
+                            selectedPhotoSubmission = nil
+                        } catch {
+                            showingAlert = true
+                            alertMessage = error.localizedDescription
+                        }
+                    }
+                }
+            )
+        }
+        .alert("Error", isPresented: $showingAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private var cityRequestsView: some View {
+        List {
+            if viewModel.pendingCityRequests.isEmpty {
+                Text("No pending city requests")
+                    .foregroundColor(.gray)
+                    .padding()
+            } else {
+                Section {
+                    ForEach(viewModel.pendingCityRequests) { request in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(request.city), \(request.state)")
+                                .font(.headline)
+                            Text("Requested: \(request.requestedAt.formatted())")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            if let notes = request.notes {
+                                Text(notes)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                Task {
+                                    do {
+                                        try await viewModel.rejectCityRequest(request.id)
+                                    } catch {
+                                        showingAlert = true
+                                        alertMessage = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                Label("Reject", systemImage: "xmark.circle.fill")
+                            }
+                            
+                            Button {
+                                Task {
+                                    do {
+                                        try await viewModel.completeCityRequest(request.id)
+                                    } catch {
+                                        showingAlert = true
+                                        alertMessage = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                Label("Complete", systemImage: "checkmark.circle.fill")
+                            }
+                            .tint(.green)
+                        }
+                    }
+                } header: {
+                    Text("Pending City Requests")
+                        .foregroundColor(themeColor)
+                }
+            }
+            
+            if !viewModel.recentlyCompletedCityRequests.isEmpty {
+                Section {
+                    ForEach(viewModel.recentlyCompletedCityRequests) { request in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(request.city), \(request.state)")
+                                .font(.headline)
+                            Text("Status: \(request.status.capitalized)")
+                                .font(.caption)
+                                .foregroundColor(request.status == "completed" ? .green : .red)
+                        }
+                    }
+                } header: {
+                    Text("Recently Processed")
+                        .foregroundColor(themeColor)
+                }
+            }
+        }
+        .refreshable {
+            await viewModel.loadCityRequests()
+        }
+        .alert("Error", isPresented: $showingAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+        .onAppear {
+            Task {
+                await viewModel.loadCityRequests()
+            }
+        }
+    }
+    
+    // Helper struct for grouping photos by date
+    private struct PhotoGroup {
+        let date: Date
+        let submissions: [PhotoSubmission]
+    }
+    
+    // Helper function to group photos by date
+    private func groupPhotosByDate(_ photos: [PhotoSubmission]) -> [PhotoGroup] {
+        let grouped = Dictionary(grouping: photos) { submission in
+            Calendar.current.startOfDay(for: submission.reviewedAt ?? submission.submittedAt)
+        }
+        
+        return grouped.map { PhotoGroup(date: $0.key, submissions: $0.value) }
+            .sorted { $0.date > $1.date }
+    }
+    
+    // Helper function to format dates
+    private func formatDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            return formatter.string(from: date)
+        }
+    }
+}
+
+struct AdminManagementView: View {
+    @StateObject private var viewModel = AdminManagementViewModel()
+    @State private var showingAddAdmin = false
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        List {
+            Section {
+                if viewModel.admins.isEmpty {
+                    Text("No admins found")
+                        .foregroundColor(.gray)
+                        .italic()
+                } else {
+                    ForEach(viewModel.admins) { admin in
+                        AdminRow(admin: admin) {
+                            Task {
+                                do {
+                                    try await viewModel.removeAdmin(admin.id)
+                                } catch {
+                                    showingAlert = true
+                                    alertMessage = error.localizedDescription
+                                }
+                            }
+                        }
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Current Admins")
+                        .foregroundColor(themeColor)
+                    Spacer()
+                    Button(action: { showingAddAdmin = true }) {
+                        Image(systemName: "person.badge.plus")
+                            .foregroundColor(themeColor)
+                    }
+                }
+            }
+        }
+        .alert("Error", isPresented: $showingAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
+        .sheet(isPresented: $showingAddAdmin) {
+            AddAdminView { email in
+                Task {
+                    do {
+                        try await viewModel.addAdmin(email: email)
+                        showingAddAdmin = false
+                    } catch {
+                        showingAlert = true
+                        alertMessage = error.localizedDescription
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct AdminRow: View {
+    let admin: Admin
+    let onRemove: () -> Void
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(admin.email)
+                    .font(.headline)
+                    .foregroundColor(themeColor)
+                Text("User ID: \(admin.userId)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                Text("Added by: \(admin.grantedByEmail)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                Text("Role: \(admin.role)")
+                    .font(.caption)
+                    .foregroundColor(themeColor)
+            }
+            .allowsHitTesting(false)
+            
+            Spacer()
+                .allowsHitTesting(false)
+            
+            Button(action: onRemove) {
+                Image(systemName: "person.fill.xmark")
+                    .foregroundColor(.red)
+                    .padding(8)
+            }
+            .buttonStyle(BorderlessButtonStyle())
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct AddAdminView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var email = ""
+    let onAdd: (String) -> Void
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     var body: some View {
         NavigationView {
-            List {
+            Form {
                 Section {
-                    ForEach(viewModel.pendingSubmissions) { submission in
-                        SubmissionRow(submission: submission) {
-                            selectedSubmission = submission
-                        }
-                    }
+                    TextField("Email", text: $email)
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                        .accentColor(themeColor)
                 } header: {
-                    Text("Pending Submissions (\(viewModel.pendingSubmissions.count))")
-                }
-                
-                Section {
-                    ForEach(viewModel.recentlyApproved) { store in
-                        StoreRow(store: store)
-                    }
-                } header: {
-                    Text("Recently Approved (\(viewModel.recentlyApproved.count))")
+                    Text("New Admin Details")
+                        .foregroundColor(themeColor)
+                } footer: {
+                    Text("Enter the email address of the user you want to make an admin.")
                 }
             }
-            .navigationTitle("Admin Dashboard")
-            .refreshable {
-                await viewModel.loadSubmissions()
-            }
-            .sheet(item: $selectedSubmission) { submission in
-                SubmissionDetailView(
-                    submission: submission,
-                    onApprove: {
-                        Task {
-                            do {
-                                try await viewModel.approveSubmission(submission.id)
-                                selectedSubmission = nil
-                                alertMessage = "Store approved successfully"
-                                showingAlert = true
-                            } catch {
-                                alertMessage = error.localizedDescription
-                                showingAlert = true
-                            }
-                        }
-                    },
-                    onReject: {
-                        selectedSubmission = submission
-                        showingRejectionDialog = true
-                    }
-                )
-            }
-            .alert("Notice", isPresented: $showingAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
-            }
-            .alert("Reject Submission", isPresented: $showingRejectionDialog) {
-                TextField("Reason for rejection", text: $rejectionReason)
-                Button("Cancel", role: .cancel) {
-                    rejectionReason = ""
+            .navigationTitle("Add Admin")
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() }
+                    .foregroundColor(themeColor),
+                trailing: Button("Add") {
+                    onAdd(email)
                 }
-                Button("Reject", role: .destructive) {
-                    guard let submission = selectedSubmission else { return }
-                    Task {
-                        do {
-                            try await viewModel.rejectSubmission(submission.id, reason: rejectionReason)
-                            selectedSubmission = nil
-                            rejectionReason = ""
-                            alertMessage = "Store submission rejected"
-                            showingAlert = true
-                        } catch {
-                            alertMessage = error.localizedDescription
-                            showingAlert = true
-                        }
-                    }
-                }
-            } message: {
-                Text("Please provide a reason for rejecting this submission")
-            }
+                .disabled(email.isEmpty)
+                .foregroundColor(email.isEmpty ? .gray : themeColor)
+            )
         }
     }
 }
@@ -112,10 +467,12 @@ struct SubmissionRow: View {
 struct SubmissionDetailView: View {
     let submission: Store
     let onApprove: () -> Void
-    let onReject: () -> Void
+    let onReject: (String) -> Void
     @State private var region: MKCoordinateRegion
+    @State private var rejectionReason = ""
+    @State private var showingRejectionAlert = false
     
-    init(submission: Store, onApprove: @escaping () -> Void, onReject: @escaping () -> Void) {
+    init(submission: Store, onApprove: @escaping () -> Void, onReject: @escaping (String) -> Void) {
         self.submission = submission
         self.onApprove = onApprove
         self.onReject = onReject
@@ -170,7 +527,6 @@ struct SubmissionDetailView: View {
                             Text("Store Features")
                                 .font(.headline)
                             
-                            FeatureRow(title: "Accepts Donations", isEnabled: submission.acceptsDonations)
                             FeatureRow(title: "Clothing Section", isEnabled: submission.hasClothingSection)
                             FeatureRow(title: "Furniture Section", isEnabled: submission.hasFurnitureSection)
                             FeatureRow(title: "Electronics Section", isEnabled: submission.hasElectronicsSection)
@@ -209,12 +565,24 @@ struct SubmissionDetailView: View {
                                 .foregroundColor(.green)
                         }
                         
-                        Button(action: onReject) {
+                        Button(action: { showingRejectionAlert = true }) {
                             Label("Reject", systemImage: "xmark.circle.fill")
                                 .foregroundColor(.red)
                         }
                     }
                 }
+            }
+            .alert("Reject Submission", isPresented: $showingRejectionAlert) {
+                TextField("Reason for rejection", text: $rejectionReason)
+                Button("Cancel", role: .cancel) {
+                    rejectionReason = ""
+                }
+                Button("Reject", role: .destructive) {
+                    onReject(rejectionReason)
+                    rejectionReason = ""
+                }
+            } message: {
+                Text("Please provide a reason for rejecting this submission")
             }
         }
     }
@@ -231,4 +599,85 @@ struct FeatureRow: View {
             Text(title)
         }
     }
-} 
+}
+
+struct PhotoSubmissionRow: View {
+    let submission: PhotoSubmission
+    let onTap: () -> Void
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                if let firstImageUrl = submission.imageUrls.first {
+                    AsyncImage(url: URL(string: firstImageUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray.opacity(0.2)
+                    }
+                    .frame(width: 60, height: 60)
+                    .cornerRadius(8)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(submission.storeName)
+                        .font(.headline)
+                        .foregroundColor(themeColor)
+                    Text("\(submission.imageUrls.count) photos")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    Text("Submitted: \(submission.submittedAt.formatted())")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+struct ApprovedPhotoRow: View {
+    let submission: PhotoSubmission
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        HStack {
+            if let firstImageUrl = submission.imageUrls.first {
+                AsyncImage(url: URL(string: firstImageUrl)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Color.gray.opacity(0.2)
+                }
+                .frame(width: 50, height: 50)
+                .cornerRadius(6)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(submission.storeName)
+                    .font(.subheadline)
+                    .foregroundColor(themeColor)
+                Text("\(submission.imageUrls.count) photos")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                if let reviewedAt = submission.reviewedAt {
+                    Text("Approved: \(reviewedAt.formatted(date: .omitted, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 2)
+    }
+}

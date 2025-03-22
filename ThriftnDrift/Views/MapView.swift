@@ -7,6 +7,8 @@ struct MapView: View {
     @State private var selectedStore: Store?
     @State private var searchText = ""
     @State private var showingStateSelector = false
+    @State private var isTransitioning = false
+    @State private var viewMode: ViewMode = .map
     @State private var position: MapCameraPosition = .region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 35.7796, longitude: -78.6382),
         span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
@@ -14,66 +16,93 @@ struct MapView: View {
     
     private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
+    enum ViewMode {
+        case map
+        case list
+    }
+    
     var body: some View {
         let _ = print("🗺 MapView body called, stores count: \(viewModel.stores.count)")
         
         NavigationView {
-            ZStack {
-                MapContent(
-                    position: $position,
-                    selectedStore: $selectedStore,
-                    stores: viewModel.stores,
-                    isLoading: viewModel.isLoading,
-                    viewModel: viewModel
-                )
-                .ignoresSafeArea(edges: [.horizontal, .bottom])
-                .onChange(of: viewModel.stores) { newStores in
-                    print("🗺 Stores updated in MapView, new count: \(newStores.count)")
-                    if !newStores.isEmpty {
-                        print("🗺 First store in updated list: \(newStores[0].name)")
-                        updateMapRegion()
-                    }
-                }
-                
-                VStack(spacing: 0) {
-                    // Search Bar
+            VStack(spacing: 0) {
+                // Search Bar and View Mode Toggle
+                VStack(spacing: 8) {
                     SearchBar(text: $searchText)
                         .padding(.horizontal)
-                        .padding(.top, 12)
-                        .padding(.bottom, 4)
                     
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(8)
-                            .padding()
+                    Picker("View Mode", selection: $viewMode) {
+                        Image(systemName: "map")
+                            .tag(ViewMode.map)
+                        Image(systemName: "list.bullet")
+                            .tag(ViewMode.list)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                }
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+                
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .padding()
+                }
+                
+                // Main Content
+                ZStack {
+                    if viewMode == .map {
+                        MapContent(
+                            position: $position,
+                            selectedStore: $selectedStore,
+                            stores: viewModel.stores,
+                            isLoading: viewModel.isLoading,
+                            viewModel: viewModel
+                        )
+                        .ignoresSafeArea(edges: [.horizontal, .bottom])
+                        .onChange(of: viewModel.stores) { newStores in
+                            print("🗺 Stores updated in MapView, new count: \(newStores.count)")
+                            if !newStores.isEmpty {
+                                print("🗺 First store in updated list: \(newStores[0].name)")
+                                updateMapRegion(animated: true)
+                            }
+                        }
+                    } else {
+                        StoreListContent(
+                            stores: viewModel.stores,
+                            selectedStore: $selectedStore
+                        )
                     }
                     
-                    Spacer()
-                    
                     // State selector button
-                    HStack {
+                    VStack {
                         Spacer()
-                        Button(action: {
-                            showingStateSelector = true
-                        }) {
-                            HStack {
-                                Text(viewModel.getAvailableStates().first { $0.code == viewModel.selectedState }?.name ?? "Select State")
-                                    .fontWeight(.medium)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption)
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                showingStateSelector = true
+                            }) {
+                                HStack {
+                                    Text(viewModel.getAvailableStates().first { $0.code == viewModel.selectedState }?.name ?? "Select State")
+                                        .fontWeight(.medium)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(themeColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                                .shadow(radius: 2)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(themeColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(20)
-                            .shadow(radius: 2)
+                            .padding(.trailing)
+                            .padding(.bottom, 8)
+                            .scaleEffect(isTransitioning ? 0.95 : 1.0)
+                            .animation(.spring(response: 0.3), value: isTransitioning)
                         }
-                        .padding(.trailing)
-                        .padding(.bottom, 8)
                     }
                 }
             }
@@ -84,7 +113,14 @@ struct MapView: View {
                     states: viewModel.getAvailableStates(),
                     onStateSelected: { stateCode in
                         Task {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isTransitioning = true
+                            }
                             await viewModel.switchToState(stateCode)
+                            updateMapRegion(animated: true)
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isTransitioning = false
+                            }
                         }
                         showingStateSelector = false
                     }
@@ -108,27 +144,34 @@ struct MapView: View {
             Task {
                 viewModel.checkLocationAuthorization()
                 await viewModel.initializeStores()
-                updateMapRegion()
+                updateMapRegion(animated: false)
             }
         }
     }
     
-    private func updateMapRegion() {
+    private func updateMapRegion(animated: Bool = true) {
         if !viewModel.stores.isEmpty {
             let coordinates = viewModel.stores.map { $0.coordinate }
             let region = regionForCoordinates(coordinates)
             
-            // Reset zoom level first
-            position = .region(MKCoordinateRegion(
-                center: region.center,
-                span: MKCoordinateSpan(latitudeDelta: 10, longitudeDelta: 10)
-            ))
-            
-            // Then animate to the correct region after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    position = .region(region)
+            if animated {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    position = .region(MKCoordinateRegion(
+                        center: region.center,
+                        span: MKCoordinateSpan(
+                            latitudeDelta: region.span.latitudeDelta * 2,
+                            longitudeDelta: region.span.longitudeDelta * 2
+                        )
+                    ))
                 }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        position = .region(region)
+                    }
+                }
+            } else {
+                position = .region(region)
             }
         }
     }
@@ -151,14 +194,9 @@ struct MapView: View {
             longitude: (minLon + maxLon) / 2
         )
         
-        // Calculate the span with some padding
-        let latDelta = (maxLat - minLat) * 1.5
-        let lonDelta = (maxLon - minLon) * 1.5
-        
-        // Ensure minimum span to avoid too much zoom
         let span = MKCoordinateSpan(
-            latitudeDelta: max(latDelta, 0.5),
-            longitudeDelta: max(lonDelta, 0.5)
+            latitudeDelta: (maxLat - minLat) * 1.5,
+            longitudeDelta: (maxLon - minLon) * 1.5
         )
         
         return MKCoordinateRegion(center: center, span: span)
@@ -171,10 +209,88 @@ struct MapContent: View {
     let stores: [Store]
     let isLoading: Bool
     let viewModel: MapViewModel
+    @State private var mapCameraIsDragging = false
     
     // Add minimum and maximum zoom levels
     private let minZoomDelta: Double = 0.001 // Maximum zoom in
     private let maxZoomDelta: Double = 50.0   // Maximum zoom out
+    private let clusterRadius: Double = 50 // Points on screen
+    
+    private struct Cluster: Identifiable {
+        let id = UUID()
+        let coordinate: CLLocationCoordinate2D
+        let stores: [Store]
+    }
+    
+    private func calculateClusters() -> [Cluster] {
+        guard let region = position.region else { 
+            return stores.map { store in
+                Cluster(coordinate: store.coordinate, stores: [store])
+            }
+        }
+        
+        // Calculate points per coordinate degree
+        let height = UIScreen.main.bounds.height
+        let pointsPerLatitude = height / region.span.latitudeDelta
+        
+        // If zoomed out too far, show individual stores
+        if region.span.latitudeDelta > maxZoomDelta {
+            return stores.map { store in
+                Cluster(coordinate: store.coordinate, stores: [store])
+            }
+        }
+        
+        var clusters: [Cluster] = []
+        var processedStores = Set<String>()
+        
+        for store in stores {
+            if processedStores.contains(store.id) { continue }
+            
+            var clusterStores = [store]
+            processedStores.insert(store.id)
+            
+            // Find nearby stores
+            for otherStore in stores where !processedStores.contains(otherStore.id) {
+                let distance = calculateScreenDistance(
+                    from: store.coordinate,
+                    to: otherStore.coordinate,
+                    pointsPerLatitude: pointsPerLatitude
+                )
+                
+                if distance <= clusterRadius {
+                    clusterStores.append(otherStore)
+                    processedStores.insert(otherStore.id)
+                }
+            }
+            
+            // Create cluster
+            let centerCoordinate = calculateClusterCenter(stores: clusterStores)
+            clusters.append(Cluster(coordinate: centerCoordinate, stores: clusterStores))
+        }
+        
+        return clusters
+    }
+    
+    private func calculateScreenDistance(
+        from coord1: CLLocationCoordinate2D,
+        to coord2: CLLocationCoordinate2D,
+        pointsPerLatitude: Double
+    ) -> Double {
+        let latDiff = abs(coord1.latitude - coord2.latitude) * pointsPerLatitude
+        let lonDiff = abs(coord1.longitude - coord2.longitude) * pointsPerLatitude
+        return sqrt(latDiff * latDiff + lonDiff * lonDiff)
+    }
+    
+    private func calculateClusterCenter(stores: [Store]) -> CLLocationCoordinate2D {
+        let totalLat = stores.reduce(0.0) { $0 + $1.coordinate.latitude }
+        let totalLon = stores.reduce(0.0) { $0 + $1.coordinate.longitude }
+        let count = Double(stores.count)
+        
+        return CLLocationCoordinate2D(
+            latitude: totalLat / count,
+            longitude: totalLon / count
+        )
+    }
     
     private func zoomIn() {
         guard let region = position.region else { return }
@@ -184,7 +300,7 @@ struct MapContent: View {
             latitudeDelta: newLatDelta,
             longitudeDelta: newLonDelta
         )
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(.easeInOut(duration: 0.5)) {
             position = .region(MKCoordinateRegion(center: region.center, span: newSpan))
         }
     }
@@ -197,7 +313,7 @@ struct MapContent: View {
             latitudeDelta: newLatDelta,
             longitudeDelta: newLonDelta
         )
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(.easeInOut(duration: 0.5)) {
             position = .region(MKCoordinateRegion(center: region.center, span: newSpan))
         }
     }
@@ -208,14 +324,41 @@ struct MapContent: View {
             let _ = print("🗺 First store: \(stores[0].name)")
         }
         
-        Map(position: $position) {
+        let clusters = calculateClusters()
+        
+        Map(position: $position, interactionModes: .all) {
             UserAnnotation()
-            ForEach(stores) { store in
-                Annotation(store.name, coordinate: store.coordinate) {
-                    StoreAnnotation(store: store, isSelected: selectedStore?.id == store.id)
-                        .onTapGesture {
-                            selectedStore = store
-                        }
+            ForEach(clusters) { cluster in
+                if cluster.stores.count == 1 {
+                    let store = cluster.stores[0]
+                    Annotation(
+                        coordinate: store.coordinate,
+                        content: {
+                            StoreAnnotation(store: store, isSelected: selectedStore?.id == store.id)
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        selectedStore = store
+                                    }
+                                }
+                        },
+                        label: { EmptyView() }
+                    )
+                } else {
+                    Annotation(
+                        coordinate: cluster.coordinate,
+                        content: {
+                            ClusterAnnotation(count: cluster.stores.count)
+                                .onTapGesture {
+                                    let region = regionForCoordinates(
+                                        cluster.stores.map { $0.coordinate }
+                                    )
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        position = .region(region)
+                                    }
+                                }
+                        },
+                        label: { EmptyView() }
+                    )
                 }
             }
         }
@@ -223,6 +366,10 @@ struct MapContent: View {
         .mapControls {
             MapCompass()
             MapScaleView()
+        }
+        .onMapCameraChange { context in
+            // Update clusters when the map camera changes
+            let _ = calculateClusters()
         }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
@@ -249,7 +396,7 @@ struct MapContent: View {
                 .buttonStyle(ScaleButtonStyle())
                 
                 Spacer()
-                    .frame(height: 16)  // Add space between zoom and navigation buttons
+                    .frame(height: 16)
                 
                 Button(action: { viewModel.centerOnUserLocation() }) {
                     Image(systemName: "location.fill")
@@ -275,6 +422,32 @@ struct MapContent: View {
             }
         }
     }
+    
+    private func regionForCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        var minLat = coordinates[0].latitude
+        var maxLat = coordinates[0].latitude
+        var minLon = coordinates[0].longitude
+        var maxLon = coordinates[0].longitude
+        
+        for coordinate in coordinates {
+            minLat = min(minLat, coordinate.latitude)
+            maxLat = max(maxLat, coordinate.latitude)
+            minLon = min(minLon, coordinate.longitude)
+            maxLon = max(maxLon, coordinate.longitude)
+        }
+        
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+        
+        let span = MKCoordinateSpan(
+            latitudeDelta: (maxLat - minLat) * 1.5,
+            longitudeDelta: (maxLon - minLon) * 1.5
+        )
+        
+        return MKCoordinateRegion(center: center, span: span)
+    }
 }
 
 // Add a custom button style for better touch feedback
@@ -286,22 +459,30 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
+// Update StoreAnnotation to support clustering
 struct StoreAnnotation: View {
     let store: Store
     let isSelected: Bool
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
                 Circle()
                     .fill(Color.white)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
                 
-                Image(systemName: "bag.fill")
+                Circle()
+                    .stroke(themeColor, lineWidth: 2)
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "storefront.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                    .foregroundColor(themeColor)
             }
+            .scaleEffect(isSelected ? 1.2 : 1.0)
+            .animation(.spring(response: 0.3), value: isSelected)
             
             if isSelected {
                 Text(store.name)
@@ -312,7 +493,30 @@ struct StoreAnnotation: View {
                     .background(Color.white)
                     .cornerRadius(8)
                     .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .transition(.scale.combined(with: .opacity))
             }
+        }
+    }
+}
+
+// Add ClusterAnnotation view
+struct ClusterAnnotation: View {
+    let count: Int
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color(red: 0.4, green: 0.5, blue: 0.95))
+                .frame(width: 44, height: 44)
+                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+            
+            Circle()
+                .stroke(Color.white, lineWidth: 2)
+                .frame(width: 44, height: 44)
+            
+            Text("\(count)")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
         }
     }
 }
@@ -321,15 +525,32 @@ struct StoreDetailSheet: View {
     let store: Store
     @Environment(\.dismiss) private var dismiss
     @Binding var isPresented: Bool
+    @State private var showingPhotoSubmission = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    StoreImageView(imageUrl: store.imageUrls.first)
+                    StoreImageView(imageUrls: store.imageUrls, imageAttribution: store.imageAttribution)
                     StoreInfoView(store: store)
                     ContactSection(store: store)
                     ActionButtonsView(store: store)
+                    
+                    // Add Photo Submission Button
+                    Button(action: {
+                        showingPhotoSubmission = true
+                    }) {
+                        HStack {
+                            Image(systemName: "camera.fill")
+                            Text("Submit Store Photos")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
                 }
                 .padding()
             }
@@ -343,33 +564,111 @@ struct StoreDetailSheet: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingPhotoSubmission) {
+                StorePhotoSubmissionView(store: store)
+            }
         }
     }
 }
 
 struct StoreImageView: View {
-    let imageUrl: String?
+    let imageUrls: [String]
+    let imageAttribution: String?
+    @State private var currentPage = 0
     
     var body: some View {
-        if let firstImage = imageUrl {
-            WebImage(url: URL(string: firstImage))
-                .resizable()
-                .onFailure { _ in
-                    Color.gray.opacity(0.2)
+        VStack(alignment: .leading, spacing: 4) {
+            if !imageUrls.isEmpty {
+                ZStack(alignment: .bottom) {
+                    TabView(selection: $currentPage) {
+                        ForEach(imageUrls.indices, id: \.self) { index in
+                            WebImage(url: URL(string: imageUrls[index]))
+                                .resizable()
+                                .onFailure { _ in
+                                    defaultStoreImage
+                                }
+                                .indicator { _, _ in
+                                    ProgressView()
+                                }
+                                .animation(.easeInOut, value: 0.5)
+                                .scaledToFill()
+                                .tag(index)
+                        }
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .frame(height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    // Custom page indicator
+                    if imageUrls.count > 1 {
+                        HStack(spacing: 8) {
+                            ForEach(0..<imageUrls.count, id: \.self) { index in
+                                Circle()
+                                    .fill(currentPage == index ? Color.white : Color.white.opacity(0.5))
+                                    .frame(width: 8, height: 8)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(12)
+                        .padding(.bottom, 8)
+                    }
                 }
-                .indicator { _, _ in
-                    ProgressView()
+                
+                if let attribution = imageAttribution {
+                    Text(attribution)
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 4)
                 }
-                .animation(.easeInOut, value: 0.5)
-                .scaledToFill()
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else {
-            Rectangle()
-                .fill(Color.gray.opacity(0.2))
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                defaultStoreImage
+            }
         }
+    }
+    
+    private var defaultStoreImage: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.1),
+                    Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.2)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            VStack(spacing: 12) {
+                // Store icon
+                Image(systemName: "storefront.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                
+                // Engaging message
+                VStack(spacing: 4) {
+                    Text("Coming Soon!")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Store photos will be added as they become available")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding()
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .background(Color(UIColor.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -640,5 +939,63 @@ struct StateSelectionSheet: View {
             }
         }
         .background(Color(UIColor.systemBackground))
+    }
+}
+
+struct StoreListContent: View {
+    let stores: [Store]
+    @Binding var selectedStore: Store?
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(stores) { store in
+                    StoreListItem(store: store)
+                        .onTapGesture {
+                            selectedStore = store
+                        }
+                }
+            }
+            .padding()
+        }
+        .background(Color(UIColor.systemGray6))
+    }
+}
+
+struct StoreListItem: View {
+    let store: Store
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Store icon
+            ZStack {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 50, height: 50)
+                    .shadow(color: Color.black.opacity(0.1), radius: 2)
+                
+                Image(systemName: "bag.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+            }
+            
+            // Store info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(store.name)
+                    .font(.headline)
+                Text(store.address)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 3)
     }
 } 

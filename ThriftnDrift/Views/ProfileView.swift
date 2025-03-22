@@ -5,6 +5,10 @@ struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSettings = false
     @State private var selectedTab = 0
+    @StateObject private var userService = UserService.shared
+    @StateObject private var cityRequestService = CityRequestService.shared
+    @State private var showingSignIn = false
+    @State private var showingCityRequest = false
     
     private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
@@ -27,6 +31,7 @@ struct ProfileView: View {
                 Picker("View", selection: $selectedTab) {
                     Text("My Finds").tag(0)
                     Text("Community").tag(1)
+                    Text("City Requests").tag(2)
                 }
                 .pickerStyle(.segmented)
                 .padding()
@@ -40,6 +45,10 @@ struct ProfileView: View {
                     // Community Finds Tab
                     CommunityFindsView()
                         .tag(1)
+                    
+                    // City Requests Tab
+                    CityRequestsView(showingCityRequest: $showingCityRequest)
+                        .tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -55,6 +64,22 @@ struct ProfileView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showingCityRequest) {
+                RequestCityView()
+            }
+        }
+    }
+    
+    private func statusColor(_ status: String) -> Color {
+        switch status {
+        case "pending":
+            return .orange
+        case "completed":
+            return .green
+        case "rejected":
+            return .red
+        default:
+            return .gray
         }
     }
 }
@@ -254,6 +279,140 @@ struct CommentsView: View {
                 }
             }
         }
+    }
+}
+
+// New view for City Requests tab
+struct CityRequestsView: View {
+    @StateObject private var cityRequestService = CityRequestService.shared
+    @Binding var showingCityRequest: Bool
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Request New City Button
+                Button(action: { showingCityRequest = true }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Request New City")
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(themeColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                
+                // Your Requests Section
+                if !cityRequestService.userRequests.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Your Requests")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        ForEach(cityRequestService.userRequests) { request in
+                            CityRequestCard(request: request)
+                        }
+                    }
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "map")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("No city requests yet")
+                            .font(.headline)
+                        Text("Request a new city to help us expand our thrift store database")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 40)
+                }
+            }
+            .padding(.vertical)
+        }
+    }
+}
+
+struct CityRequestCard: View {
+    let request: CityRequest
+    @StateObject private var cityRequestService = CityRequestService.shared
+    @State private var showingCancelAlert = false
+    
+    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("\(request.city), \(request.state)")
+                    .font(.headline)
+                Spacer()
+                StatusBadge(status: request.status)
+            }
+            
+            Text("Requested: \(request.requestedAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            if let notes = request.notes {
+                Text(notes)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            if request.status == "pending" {
+                Button(role: .destructive, action: { showingCancelAlert = true }) {
+                    Text("Cancel Request")
+                        .font(.subheadline)
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 5)
+        .padding(.horizontal)
+        .alert("Cancel Request", isPresented: $showingCancelAlert) {
+            Button("Keep", role: .cancel) { }
+            Button("Cancel Request", role: .destructive) {
+                Task {
+                    try? await cityRequestService.cancelRequest(request.id)
+                }
+            }
+        } message: {
+            Text("Are you sure you want to cancel this city request?")
+        }
+    }
+}
+
+struct StatusBadge: View {
+    let status: String
+    
+    var color: Color {
+        switch status {
+        case "pending":
+            return .orange
+        case "completed":
+            return .green
+        case "rejected":
+            return .red
+        default:
+            return .gray
+        }
+    }
+    
+    var body: some View {
+        Text(status.capitalized)
+            .font(.caption)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.2))
+            .foregroundColor(color)
+            .cornerRadius(8)
     }
 }
 

@@ -6,7 +6,6 @@ struct User: Identifiable, Codable {
     let id: String
     let email: String
     let displayName: String?
-    let isAdmin: Bool
     var storeSubmissions: [String] // IDs of submitted stores
     let createdAt: Date
     
@@ -14,16 +13,14 @@ struct User: Identifiable, Codable {
         case id
         case email
         case displayName
-        case isAdmin
         case storeSubmissions
         case createdAt
     }
     
-    init(id: String, email: String, displayName: String? = nil, isAdmin: Bool = false, storeSubmissions: [String] = [], createdAt: Date = Date()) {
+    init(id: String, email: String, displayName: String? = nil, storeSubmissions: [String] = [], createdAt: Date = Date()) {
         self.id = id
         self.email = email
         self.displayName = displayName
-        self.isAdmin = isAdmin
         self.storeSubmissions = storeSubmissions
         self.createdAt = createdAt
     }
@@ -33,7 +30,6 @@ struct User: Identifiable, Codable {
         self.id = firebaseUser.uid
         self.email = firebaseUser.email ?? ""
         self.displayName = firebaseUser.displayName
-        self.isAdmin = false // Default to false, will be updated from Firestore
         self.storeSubmissions = []
         self.createdAt = Date()
     }
@@ -51,7 +47,6 @@ struct User: Identifiable, Codable {
         self.id = document.documentID
         self.email = email
         self.displayName = data["displayName"] as? String
-        self.isAdmin = data["isAdmin"] as? Bool ?? false
         self.storeSubmissions = data["storeSubmissions"] as? [String] ?? []
         self.createdAt = createdAt
     }
@@ -61,7 +56,6 @@ struct User: Identifiable, Codable {
         [
             "email": email,
             "displayName": displayName ?? "",
-            "isAdmin": isAdmin,
             "storeSubmissions": storeSubmissions,
             "createdAt": Timestamp(date: createdAt)
         ]

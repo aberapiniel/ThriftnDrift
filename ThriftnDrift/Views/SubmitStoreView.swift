@@ -102,7 +102,6 @@ struct SubmitStoreView: View {
                 }
                 
                 Section(header: Text("Store Features")) {
-                    Toggle("Accepts Donations", isOn: $acceptsDonations)
                     Toggle("Has Clothing Section", isOn: $hasClothingSection)
                     Toggle("Has Furniture Section", isOn: $hasFurnitureSection)
                     Toggle("Has Electronics Section", isOn: $hasElectronicsSection)
@@ -189,7 +188,6 @@ struct SubmitStoreView: View {
                     categories: Array(selectedCategories),
                     website: website.isEmpty ? nil : website,
                     phoneNumber: phoneNumber.isEmpty ? nil : phoneNumber,
-                    acceptsDonations: acceptsDonations,
                     hasClothingSection: hasClothingSection,
                     hasFurnitureSection: hasFurnitureSection,
                     hasElectronicsSection: hasElectronicsSection,
