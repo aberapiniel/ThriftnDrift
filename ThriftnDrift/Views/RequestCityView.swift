@@ -20,34 +20,41 @@ struct RequestCityView: View {
         "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
     ]
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("City Information")) {
+                Section(header: Text("City Information").foregroundColor(ThemeManager.textColor)) {
                     TextField("City Name", text: $city)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .foregroundColor(ThemeManager.textColor)
                         .autocapitalization(.words)
                     
                     Picker("State", selection: $state) {
                         ForEach(states, id: \.self) { state in
-                            Text(state).tag(state)
+                            Text(state)
+                                .foregroundColor(ThemeManager.textColor)
+                                .tag(state)
                         }
                     }
+                    .tint(ThemeManager.brandPurple)
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 
-                Section(header: Text("Additional Information")) {
+                Section(header: Text("Additional Information").foregroundColor(ThemeManager.textColor)) {
                     TextEditor(text: $notes)
                         .frame(height: 100)
+                        .foregroundColor(ThemeManager.textColor)
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 
                 if !cityRequestService.userRequests.isEmpty {
-                    Section(header: Text("Your Requests")) {
+                    Section(header: Text("Your Requests").foregroundColor(ThemeManager.textColor)) {
                         ForEach(cityRequestService.userRequests) { request in
                             HStack {
                                 VStack(alignment: .leading) {
                                     Text("\(request.city), \(request.state)")
                                         .font(.headline)
+                                        .foregroundColor(ThemeManager.textColor)
                                     Text(request.status.capitalized)
                                         .font(.caption)
                                         .foregroundColor(statusColor(request.status))
@@ -66,8 +73,11 @@ struct RequestCityView: View {
                             }
                         }
                     }
+                    .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(ThemeManager.backgroundStyle)
             .navigationTitle("Request City")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -75,11 +85,13 @@ struct RequestCityView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Submit") {
                         submitRequest()
                     }
+                    .foregroundColor(isValid ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.3))
                     .disabled(!isValid)
                 }
             }
@@ -97,10 +109,13 @@ struct RequestCityView: View {
             }
             .overlay {
                 if isLoading {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.2))
+                    ZStack {
+                        ThemeManager.warmOverlay.opacity(0.2)
+                            .ignoresSafeArea()
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(ThemeManager.brandPurple)
+                    }
                 }
             }
         }
@@ -115,13 +130,13 @@ struct RequestCityView: View {
         case "pending":
             return .orange
         case "approved":
-            return .blue
+            return ThemeManager.brandPurple
         case "completed":
-            return .green
+            return ThemeManager.brandPurple
         case "rejected":
             return .red
         default:
-            return .gray
+            return ThemeManager.textColor.opacity(0.7)
         }
     }
     

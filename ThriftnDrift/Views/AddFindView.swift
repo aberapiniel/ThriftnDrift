@@ -15,7 +15,6 @@ struct AddFindView: View {
     @State private var showingError = false
     
     private let categories = ["Clothing", "Furniture", "Electronics", "Books", "Accessories", "Home Goods", "Other"]
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     private var priceValue: Double {
         return Double(priceText) ?? 0
@@ -28,45 +27,54 @@ struct AddFindView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Store")) {
+                Section(header: Text("Store").foregroundColor(ThemeManager.textColor)) {
                     Button(action: { showingStoreSelector = true }) {
                         HStack {
                             if let store = selectedStore {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(store.name)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(ThemeManager.textColor)
                                     Text(store.address)
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.7))
                                 }
                             } else {
                                 Text("Select Store")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(ThemeManager.brandPurple)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.7))
                         }
                     }
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 
-                Section(header: Text("Item Details")) {
+                Section(header: Text("Item Details").foregroundColor(ThemeManager.textColor)) {
                     TextField("Description", text: $description)
+                        .foregroundColor(ThemeManager.textColor)
                     TextField("Price", text: $priceText)
                         .keyboardType(.decimalPad)
+                        .foregroundColor(ThemeManager.textColor)
                     
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(categories, id: \.self) { category in
-                            Text(category).tag(category)
+                            Text(category)
+                                .foregroundColor(ThemeManager.textColor)
+                                .tag(category)
                         }
                     }
+                    .tint(ThemeManager.brandPurple)
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 
-                Section(header: Text("Photos")) {
+                Section(header: Text("Photos").foregroundColor(ThemeManager.textColor)) {
                     Button(action: { showingImagePicker = true }) {
                         HStack {
                             Image(systemName: "photo")
+                                .foregroundColor(ThemeManager.brandPurple)
                             Text("Add Photos")
+                                .foregroundColor(ThemeManager.brandPurple)
                         }
                     }
                     
@@ -78,7 +86,7 @@ struct AddFindView: View {
                                         .resizable()
                                         .scaledToFill()
                                         .frame(width: 100, height: 100)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
                                         .overlay(
                                             Button(action: { selectedImages.remove(at: index) }) {
                                                 Image(systemName: "xmark.circle.fill")
@@ -95,7 +103,10 @@ struct AddFindView: View {
                         }
                     }
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
             }
+            .scrollContentBackground(.hidden)
+            .background(ThemeManager.backgroundStyle)
             .navigationTitle("New Find")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -103,12 +114,14 @@ struct AddFindView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Post") {
                         submitFind()
                     }
+                    .foregroundColor(isFormValid ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.3))
                     .disabled(!isFormValid)
                 }
             }

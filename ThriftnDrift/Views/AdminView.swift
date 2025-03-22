@@ -3,6 +3,7 @@ import MapKit
 
 struct AdminView: View {
     @StateObject private var viewModel = AdminViewModel()
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedSubmission: Store?
     @State private var selectedPhotoSubmission: PhotoSubmission?
     @State private var showingRejectionDialog = false
@@ -11,31 +12,57 @@ struct AdminView: View {
     @State private var alertMessage = ""
     @State private var selectedTab = 0
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
-        VStack {
-            Picker("Admin Section", selection: $selectedTab) {
-                Text("Submissions").tag(0)
-                Text("Photos").tag(1)
-                Text("Cities").tag(2)
-                Text("Admins").tag(3)
-            }
-            .pickerStyle(.segmented)
-            .padding()
+        ZStack {
+            ThemeManager.backgroundStyle
+                .ignoresSafeArea()
             
-            switch selectedTab {
-            case 0:
-                submissionsView
-            case 1:
-                photoSubmissionsView
-            case 2:
-                cityRequestsView
-            default:
-                AdminManagementView()
+            VStack(spacing: 0) {
+                Text("Admin Dashboard")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(ThemeManager.textColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                
+                Picker("Admin Section", selection: $selectedTab) {
+                    Text("Submissions").tag(0)
+                    Text("Photos").tag(1)
+                    Text("Cities").tag(2)
+                    Text("Admins").tag(3)
+                }
+                .pickerStyle(.segmented)
+                .padding()
+                .background(ThemeManager.warmOverlay.opacity(0.1))
+                
+                switch selectedTab {
+                case 0:
+                    submissionsView
+                case 1:
+                    photoSubmissionsView
+                case 2:
+                    cityRequestsView
+                default:
+                    AdminManagementView()
+                }
             }
         }
-        .navigationTitle("Admin Dashboard")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Settings")
+                            .font(.system(size: 16, weight: .regular))
+                    }
+                    .foregroundColor(ThemeManager.brandPurple)
+                }
+            }
+        }
     }
     
     private var submissionsView: some View {
@@ -48,7 +75,7 @@ struct AdminView: View {
                 }
             } header: {
                 Text("Pending Submissions (\(viewModel.pendingSubmissions.count))")
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
             }
             
             Section {
@@ -56,16 +83,22 @@ struct AdminView: View {
                     VStack(alignment: .leading) {
                         Text(store.name)
                             .font(.headline)
+                            .foregroundColor(ThemeManager.textColor)
                         Text("Approved")
                             .font(.caption)
                             .foregroundColor(.green)
                     }
+                    .padding(.vertical, 4)
+                    .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 }
             } header: {
                 Text("Recently Approved")
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .refreshable {
             await viewModel.loadSubmissions()
         }
@@ -108,21 +141,21 @@ struct AdminView: View {
             Section {
                 if viewModel.pendingPhotoSubmissions.isEmpty {
                     Text("No pending photo submissions")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                         .italic()
                 } else {
                     ForEach(viewModel.pendingPhotoSubmissions) { submission in
                         PhotoSubmissionRow(submission: submission) {
                             selectedPhotoSubmission = submission
                         }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                 }
             } header: {
                 Text("Pending Photo Submissions (\(viewModel.pendingPhotoSubmissions.count))")
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
             }
             
-            // Recently Approved Photos Section
             if !viewModel.recentlyApprovedPhotos.isEmpty {
                 Section {
                     ForEach(groupPhotosByDate(viewModel.recentlyApprovedPhotos), id: \.date) { group in
@@ -130,27 +163,32 @@ struct AdminView: View {
                             content: {
                                 ForEach(group.submissions) { submission in
                                     ApprovedPhotoRow(submission: submission)
+                                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                                 }
                             },
                             label: {
                                 HStack {
                                     Text(formatDate(group.date))
                                         .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(ThemeManager.textColor)
                                     Spacer()
                                     Text("\(group.submissions.count) photos")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                                 }
                             }
                         )
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                 } header: {
                     Text("Recently Approved")
-                        .foregroundColor(themeColor)
+                        .foregroundColor(ThemeManager.brandPurple)
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .refreshable {
             await viewModel.loadSubmissions()
         }
@@ -192,7 +230,7 @@ struct AdminView: View {
         List {
             if viewModel.pendingCityRequests.isEmpty {
                 Text("No pending city requests")
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     .padding()
             } else {
                 Section {
@@ -200,15 +238,18 @@ struct AdminView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(request.city), \(request.state)")
                                 .font(.headline)
+                                .foregroundColor(ThemeManager.textColor)
                             Text("Requested: \(request.requestedAt.formatted())")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.6))
                             if let notes = request.notes {
                                 Text(notes)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(ThemeManager.textColor.opacity(0.8))
                             }
                         }
+                        .padding(.vertical, 4)
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 Task {
@@ -240,7 +281,7 @@ struct AdminView: View {
                     }
                 } header: {
                     Text("Pending City Requests")
-                        .foregroundColor(themeColor)
+                        .foregroundColor(ThemeManager.brandPurple)
                 }
             }
             
@@ -250,17 +291,23 @@ struct AdminView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(request.city), \(request.state)")
                                 .font(.headline)
+                                .foregroundColor(ThemeManager.textColor)
                             Text("Status: \(request.status.capitalized)")
                                 .font(.caption)
                                 .foregroundColor(request.status == "completed" ? .green : .red)
                         }
+                        .padding(.vertical, 4)
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                 } header: {
                     Text("Recently Processed")
-                        .foregroundColor(themeColor)
+                        .foregroundColor(ThemeManager.brandPurple)
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .refreshable {
             await viewModel.loadCityRequests()
         }
@@ -313,14 +360,12 @@ struct AdminManagementView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         List {
             Section {
                 if viewModel.admins.isEmpty {
                     Text("No admins found")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                         .italic()
                 } else {
                     ForEach(viewModel.admins) { admin in
@@ -334,20 +379,24 @@ struct AdminManagementView: View {
                                 }
                             }
                         }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                 }
             } header: {
                 HStack {
                     Text("Current Admins")
-                        .foregroundColor(themeColor)
+                        .foregroundColor(ThemeManager.brandPurple)
                     Spacer()
                     Button(action: { showingAddAdmin = true }) {
                         Image(systemName: "person.badge.plus")
-                            .foregroundColor(themeColor)
+                            .foregroundColor(ThemeManager.brandPurple)
                     }
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .alert("Error", isPresented: $showingAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -373,23 +422,21 @@ struct AdminRow: View {
     let admin: Admin
     let onRemove: () -> Void
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(admin.email)
                     .font(.headline)
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
                 Text("User ID: \(admin.userId)")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                 Text("Added by: \(admin.grantedByEmail)")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                 Text("Role: \(admin.role)")
                     .font(.caption)
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
             }
             .allowsHitTesting(false)
             
@@ -412,33 +459,44 @@ struct AddAdminView: View {
     @State private var email = ""
     let onAdd: (String) -> Void
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         NavigationView {
-            Form {
-                Section {
-                    TextField("Email", text: $email)
-                        .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
-                        .accentColor(themeColor)
-                } header: {
-                    Text("New Admin Details")
-                        .foregroundColor(themeColor)
-                } footer: {
-                    Text("Enter the email address of the user you want to make an admin.")
+            ZStack {
+                ThemeManager.backgroundStyle
+                    .ignoresSafeArea()
+                
+                Form {
+                    Section {
+                        TextField("Email", text: $email)
+                            .autocapitalization(.none)
+                            .keyboardType(.emailAddress)
+                            .accentColor(ThemeManager.brandPurple)
+                            .foregroundColor(ThemeManager.textColor)
+                    } header: {
+                        Text("New Admin Details")
+                            .foregroundColor(ThemeManager.brandPurple)
+                    } footer: {
+                        Text("Enter the email address of the user you want to make an admin.")
+                            .foregroundColor(ThemeManager.textColor.opacity(0.6))
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Add Admin")
-            .navigationBarItems(
-                leading: Button("Cancel") { dismiss() }
-                    .foregroundColor(themeColor),
-                trailing: Button("Add") {
-                    onAdd(email)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(ThemeManager.brandPurple)
                 }
-                .disabled(email.isEmpty)
-                .foregroundColor(email.isEmpty ? .gray : themeColor)
-            )
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Add") {
+                        onAdd(email)
+                    }
+                    .disabled(email.isEmpty)
+                    .foregroundColor(email.isEmpty ? ThemeManager.textColor.opacity(0.4) : ThemeManager.brandPurple)
+                }
+            }
         }
     }
 }
@@ -452,15 +510,17 @@ struct SubmissionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(submission.name)
                     .font(.headline)
+                    .foregroundColor(ThemeManager.textColor)
                 Text(submission.address)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                 Text("Submitted: \(submission.lastVerified?.formatted() ?? "Unknown")")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
             }
             .padding(.vertical, 4)
         }
+        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
     }
 }
 
@@ -605,8 +665,6 @@ struct PhotoSubmissionRow: View {
     let submission: PhotoSubmission
     let onTap: () -> Void
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         Button(action: onTap) {
             HStack {
@@ -616,7 +674,7 @@ struct PhotoSubmissionRow: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Color.gray.opacity(0.2)
+                        ThemeManager.warmOverlay.opacity(0.2)
                     }
                     .frame(width: 60, height: 60)
                     .cornerRadius(8)
@@ -625,19 +683,19 @@ struct PhotoSubmissionRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(submission.storeName)
                         .font(.headline)
-                        .foregroundColor(themeColor)
+                        .foregroundColor(ThemeManager.brandPurple)
                     Text("\(submission.imageUrls.count) photos")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     Text("Submitted: \(submission.submittedAt.formatted())")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.4))
             }
             .padding(.vertical, 4)
         }
@@ -646,7 +704,6 @@ struct PhotoSubmissionRow: View {
 
 struct ApprovedPhotoRow: View {
     let submission: PhotoSubmission
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     var body: some View {
         HStack {
@@ -656,7 +713,7 @@ struct ApprovedPhotoRow: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Color.gray.opacity(0.2)
+                    ThemeManager.warmOverlay.opacity(0.2)
                 }
                 .frame(width: 50, height: 50)
                 .cornerRadius(6)
@@ -665,10 +722,10 @@ struct ApprovedPhotoRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(submission.storeName)
                     .font(.subheadline)
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
                 Text("\(submission.imageUrls.count) photos")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                 if let reviewedAt = submission.reviewedAt {
                     Text("Approved: \(reviewedAt.formatted(date: .omitted, time: .shortened))")
                         .font(.caption2)

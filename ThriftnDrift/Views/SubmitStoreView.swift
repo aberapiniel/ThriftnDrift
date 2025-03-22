@@ -50,63 +50,162 @@ struct SubmitStoreView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Basic Information")) {
-                    TextField("Store Name", text: $name)
-                    TextEditor(text: $description)
-                        .frame(height: 100)
-                }
-                
-                Section(header: Text("Address")) {
-                    TextField("Street Address", text: $streetAddress)
-                    TextField("City", text: $city)
-                    Picker("State", selection: $state) {
-                        ForEach(states, id: \.self) { state in
-                            Text(state).tag(state)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Basic Information Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Basic Information")
+                        
+                        VStack(spacing: 12) {
+                            CustomTextField(title: "Store Name", text: $name)
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Description")
+                                    .font(.subheadline)
+                                    .foregroundColor(ThemeManager.textColor)
+                                TextEditor(text: $description)
+                                    .frame(height: 100)
+                                    .padding(8)
+                                    .background(Color.white)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(ThemeManager.warmOverlay.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
                         }
                     }
-                    TextField("ZIP Code", text: $zipCode)
-                        .keyboardType(.numberPad)
-                }
-                
-                Section(header: Text("Categories")) {
-                    ForEach(availableCategories, id: \.self) { category in
-                        Toggle(category, isOn: Binding(
-                            get: { selectedCategories.contains(category) },
-                            set: { isSelected in
-                                if isSelected {
-                                    selectedCategories.insert(category)
-                                } else {
-                                    selectedCategories.remove(category)
+                    .padding(.horizontal, 24)
+                    
+                    // Address Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Address")
+                        
+                        VStack(spacing: 12) {
+                            CustomTextField(title: "Street Address", text: $streetAddress)
+                            CustomTextField(title: "City", text: $city)
+                            
+                            // State Picker
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("State")
+                                    .font(.subheadline)
+                                    .foregroundColor(ThemeManager.textColor)
+                                
+                                Menu {
+                                    ForEach(states, id: \.self) { stateCode in
+                                        Button(stateCode) {
+                                            state = stateCode
+                                        }
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(state)
+                                            .foregroundColor(ThemeManager.textColor)
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .foregroundColor(ThemeManager.textColor.opacity(0.6))
+                                    }
+                                    .padding()
+                                    .background(ThemeManager.warmOverlay.opacity(0.05))
+                                    .cornerRadius(12)
                                 }
                             }
-                        ))
-                    }
-                }
-                
-                Section(header: Text("Price Range")) {
-                    Picker("Price Range", selection: $priceRange) {
-                        ForEach(priceRanges, id: \.self) { range in
-                            Text(range).tag(range)
+                            
+                            CustomTextField(title: "ZIP Code", text: $zipCode)
+                                .keyboardType(.numberPad)
                         }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal, 24)
+                    
+                    // Categories Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Categories")
+                        
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            ForEach(availableCategories, id: \.self) { category in
+                                CategoryToggle(
+                                    title: category,
+                                    isSelected: selectedCategories.contains(category)
+                                ) {
+                                    if selectedCategories.contains(category) {
+                                        selectedCategories.remove(category)
+                                    } else {
+                                        selectedCategories.insert(category)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Price Range Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Price Range")
+                        
+                        HStack(spacing: 0) {
+                            ForEach(priceRanges, id: \.self) { range in
+                                Button(action: {
+                                    priceRange = range
+                                }) {
+                                    Text(range)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            priceRange == range ?
+                                            ThemeManager.brandPurple :
+                                            ThemeManager.warmOverlay.opacity(0.05)
+                                        )
+                                        .foregroundColor(
+                                            priceRange == range ?
+                                            .white :
+                                            ThemeManager.textColor
+                                        )
+                                }
+                            }
+                        }
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(ThemeManager.warmOverlay.opacity(0.1), lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Contact Information Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Contact Information")
+                        
+                        VStack(spacing: 12) {
+                            CustomTextField(title: "Website (optional)", text: $website)
+                                .keyboardType(.URL)
+                                .autocapitalization(.none)
+                            CustomTextField(title: "Phone Number (optional)", text: $phoneNumber)
+                                .keyboardType(.phonePad)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Store Features Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader(title: "Store Features")
+                        
+                        VStack(spacing: 12) {
+                            FeatureToggle(title: "Has Clothing Section", isOn: $hasClothingSection)
+                            FeatureToggle(title: "Has Furniture Section", isOn: $hasFurnitureSection)
+                            FeatureToggle(title: "Has Electronics Section", isOn: $hasElectronicsSection)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    Spacer(minLength: 40)
                 }
-                
-                Section(header: Text("Contact Information")) {
-                    TextField("Website (optional)", text: $website)
-                        .keyboardType(.URL)
-                        .autocapitalization(.none)
-                    TextField("Phone Number (optional)", text: $phoneNumber)
-                        .keyboardType(.phonePad)
-                }
-                
-                Section(header: Text("Store Features")) {
-                    Toggle("Has Clothing Section", isOn: $hasClothingSection)
-                    Toggle("Has Furniture Section", isOn: $hasFurnitureSection)
-                    Toggle("Has Electronics Section", isOn: $hasElectronicsSection)
-                }
+                .padding(.vertical, 24)
             }
+            .background(ThemeManager.backgroundStyle)
             .navigationTitle("Submit Store")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -114,12 +213,14 @@ struct SubmitStoreView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Submit") {
                         submitStore()
                     }
                     .disabled(!isValid)
+                    .foregroundColor(isValid ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.3))
                 }
             }
             .alert("Error", isPresented: $showingError) {
@@ -205,21 +306,89 @@ struct SubmitStoreView: View {
     }
 }
 
-struct CategoryChip: View {
+// MARK: - Supporting Views
+
+struct SectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.headline)
+            .foregroundColor(ThemeManager.brandPurple)
+    }
+}
+
+struct CustomTextField: View {
+    let title: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    var autocapitalization: TextInputAutocapitalization = .sentences
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(ThemeManager.textColor)
+            
+            TextField("", text: $text)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(ThemeManager.warmOverlay.opacity(0.2), lineWidth: 1)
+                )
+                .keyboardType(keyboardType)
+                .textInputAutocapitalization(autocapitalization)
+        }
+    }
+}
+
+struct CategoryToggle: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color(red: 0.4, green: 0.5, blue: 0.95) : Color.gray.opacity(0.1))
-                .foregroundColor(isSelected ? .white : .primary)
-                .cornerRadius(16)
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ?
+                ThemeManager.brandPurple.opacity(0.1) :
+                ThemeManager.warmOverlay.opacity(0.05)
+            )
+            .foregroundColor(
+                isSelected ?
+                ThemeManager.brandPurple :
+                ThemeManager.textColor
+            )
+            .cornerRadius(8)
         }
-        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct FeatureToggle: View {
+    let title: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        Toggle(title, isOn: $isOn)
+            .toggleStyle(SwitchToggleStyle(tint: ThemeManager.brandPurple))
+            .foregroundColor(ThemeManager.textColor)
+    }
+}
+
+struct SubmitStoreView_Previews: PreviewProvider {
+    static var previews: some View {
+        SubmitStoreView()
     }
 } 

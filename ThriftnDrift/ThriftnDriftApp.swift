@@ -19,11 +19,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct ThriftnDriftApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var userService = UserService.shared
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(AuthenticationManager())
+                .environmentObject(userService)
         }
     }
 }

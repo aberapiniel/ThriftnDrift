@@ -13,159 +13,151 @@ struct StoreDetailView: View {
     let store: Store
     @Environment(\.dismiss) private var dismiss
     @StateObject private var favoritesService = FavoritesService.shared
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 24) {
                 // Store Image or Placeholder
-                StoreImageView(imageUrls: store.imageUrls, imageAttribution: store.imageAttribution)
+                ZStack {
+                    if store.imageUrls.isEmpty {
+                        ZStack {
+                            Rectangle()
+                                .fill(ThemeManager.warmOverlay.opacity(0.1))
+                                .frame(height: 200)
+                            
+                            VStack(spacing: 12) {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(ThemeManager.brandPurple)
+                                
+                                Text("No Photos Yet")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(ThemeManager.textColor)
+                                
+                                Text("Photos of this store will be added soon")
+                                    .font(.subheadline)
+                                    .foregroundColor(ThemeManager.textColor.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                            }
+                        }
+                    } else {
+                        StoreImageView(imageUrls: store.imageUrls, imageAttribution: store.imageAttribution)
+                    }
+                }
+                .background(ThemeManager.warmOverlay.opacity(0.05))
                 
                 // Store Information
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(store.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 20) {
+                    // Name and Basic Info
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(store.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(ThemeManager.textColor)
+                        
+                        Text(store.address)
+                            .font(.subheadline)
+                            .foregroundColor(ThemeManager.textColor.opacity(0.7))
+                    }
                     
-                    Text(store.address)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                    
+                    // Categories
                     if !store.categories.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(store.categories, id: \.self) { category in
                                     Text(category)
-                                        .font(.caption)
+                                        .font(.subheadline)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.8))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Color.gray.opacity(0.1))
+                                        .background(ThemeManager.warmOverlay.opacity(0.1))
                                         .cornerRadius(12)
                                 }
                             }
                         }
                     }
                     
-                    // Rating and Price
-                    HStack {
-                        if store.rating > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .foregroundColor(.yellow)
-                                Text(String(format: "%.1f", store.rating))
-                                Text("(\(store.reviewCount))")
-                                    .foregroundColor(.gray)
+                    // Store Features Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Store Features")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(ThemeManager.textColor)
+                        
+                        HStack(spacing: 24) {
+                            if store.hasClothingSection {
+                                FeatureItem(icon: "tshirt", text: "Clothing", isActive: true)
+                            }
+                            if store.hasFurnitureSection {
+                                FeatureItem(icon: "chair", text: "Furniture", isActive: true)
+                            }
+                            if store.hasElectronicsSection {
+                                FeatureItem(icon: "desktopcomputer", text: "Electronics", isActive: true)
                             }
                         }
-                        
-                        Spacer()
-                        
-                        Text(store.priceRange)
-                            .foregroundColor(.gray)
                     }
-                    .font(.subheadline)
-                }
-                .padding(.horizontal)
-                
-                // Store Features
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Store Features")
-                        .font(.headline)
+                    .padding(.vertical, 8)
                     
-                    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                        GridRow {
-                            FeatureItem(
-                                icon: "tshirt",
-                                text: "Clothing",
-                                isEnabled: store.hasClothingSection
-                            )
-                            FeatureItem(
-                                icon: "chair",
-                                text: "Furniture",
-                                isEnabled: store.hasFurnitureSection
-                            )
-                        }
-                        
-                        GridRow {
-                            FeatureItem(
-                                icon: "desktopcomputer",
-                                text: "Electronics",
-                                isEnabled: store.hasElectronicsSection
-                            )
-                        }
-                    }
-                }
-                .padding()
-                .background(Color.gray.opacity(0.05))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                
-                // Contact Information
-                if store.phoneNumber != nil || store.website != nil {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Contact")
-                            .font(.headline)
-                        
-                        if let phone = store.phoneNumber {
-                            Button(action: {
-                                if let url = URL(string: "tel:\(phone)") {
-                                    UIApplication.shared.open(url)
+                    // Contact Section
+                    if store.phoneNumber != nil || store.website != nil {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Contact")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(ThemeManager.textColor)
+                            
+                            if let phone = store.phoneNumber,
+                               let phoneURL = URL(string: "tel:\(phone)") {
+                                Link(destination: phoneURL) {
+                                    HStack {
+                                        Image(systemName: "phone")
+                                        Text(phone)
+                                    }
+                                    .foregroundColor(ThemeManager.brandPurple)
                                 }
-                            }) {
-                                HStack {
-                                    Image(systemName: "phone.fill")
-                                    Text(phone)
+                            }
+                            
+                            if let website = store.website,
+                               let websiteURL = URL(string: website) {
+                                Link(destination: websiteURL) {
+                                    HStack {
+                                        Image(systemName: "globe")
+                                        Text(website)
+                                            .lineLimit(1)
+                                    }
+                                    .foregroundColor(ThemeManager.brandPurple)
                                 }
-                                .foregroundColor(.primary)
                             }
                         }
-                        
-                        if let website = store.website {
-                            Button(action: {
-                                if let url = URL(string: website) {
-                                    UIApplication.shared.open(url)
-                                }
-                            }) {
-                                HStack {
-                                    Image(systemName: "globe")
-                                    Text(website)
-                                }
-                                .foregroundColor(.primary)
-                            }
-                        }
+                        .padding(.vertical, 8)
                     }
-                    .padding()
-                    .background(Color.gray.opacity(0.05))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
                 }
+                .padding(.horizontal, 24)
                 
                 // Action Buttons
-                HStack(spacing: 16) {
+                HStack(spacing: 20) {
                     Button(action: {
-                        let url = URL(string: "maps://?q=\(store.name)&ll=\(store.coordinate.latitude),\(store.coordinate.longitude)")
-                        if let url = url {
+                        // Handle directions
+                        if let url = URL(string: "maps://?address=\(store.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
                             UIApplication.shared.open(url)
                         }
                     }) {
                         HStack {
-                            Image(systemName: "map.fill")
+                            Image(systemName: "map")
                             Text("Directions")
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(themeColor)
+                        .padding(.vertical, 12)
+                        .background(ThemeManager.brandPurple)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
                     
                     Button(action: {
                         withAnimation {
-                            if favoritesService.isFavorite(store) {
-                                favoritesService.removeFavorite(store)
-                            } else {
-                                favoritesService.addFavorite(store)
-                            }
+                            favoritesService.toggleFavorite(store)
                         }
                     }) {
                         HStack {
@@ -173,43 +165,40 @@ struct StoreDetailView: View {
                             Text(favoritesService.isFavorite(store) ? "Favorited" : "Favorite")
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(favoritesService.isFavorite(store) ? themeColor : Color.white)
-                        .foregroundColor(favoritesService.isFavorite(store) ? .white : themeColor)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(themeColor, lineWidth: 1)
+                        .padding(.vertical, 12)
+                        .background(
+                            favoritesService.isFavorite(store) ?
+                            ThemeManager.brandLightPurple : ThemeManager.warmOverlay.opacity(0.1)
                         )
+                        .foregroundColor(
+                            favoritesService.isFavorite(store) ?
+                            .white : ThemeManager.brandPurple
+                        )
+                        .cornerRadius(12)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
             }
-            .padding(.vertical)
         }
+        .background(ThemeManager.backgroundStyle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
-                }
-            }
-        }
     }
 }
 
 struct FeatureItem: View {
     let icon: String
     let text: String
-    let isEnabled: Bool
+    let isActive: Bool
     
     var body: some View {
-        HStack {
+        VStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundColor(isEnabled ? .green : .gray)
+                .font(.system(size: 24))
+                .foregroundColor(isActive ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.3))
             Text(text)
-                .foregroundColor(isEnabled ? .primary : .gray)
+                .font(.caption)
+                .foregroundColor(isActive ? ThemeManager.textColor : ThemeManager.textColor.opacity(0.3))
         }
     }
 }

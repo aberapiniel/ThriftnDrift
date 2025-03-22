@@ -3,67 +3,94 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var authManager: AuthenticationManager
+    @StateObject private var userService = UserService.shared
     @State private var showingLogoutAlert = false
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         NavigationView {
-            List {
-                Section(header: Text("Account")) {
-                    NavigationLink(destination: EditProfileView()) {
-                        Label("Edit Profile", systemImage: "person.circle")
-                    }
-                    
-                    NavigationLink(destination: NotificationSettingsView()) {
-                        Label("Notifications", systemImage: "bell")
-                    }
-                    
-                    NavigationLink(destination: PrivacySettingsView()) {
-                        Label("Privacy", systemImage: "lock")
-                    }
-                }
+            ZStack {
+                ThemeManager.backgroundStyle
+                    .ignoresSafeArea()
                 
-                Section(header: Text("App")) {
-                    NavigationLink(destination: AppearanceSettingsView()) {
-                        Label("Appearance", systemImage: "paintbrush")
+                List {
+                    if userService.isAdmin {
+                        Section {
+                            NavigationLink(destination: AdminView()) {
+                                Label("Admin", systemImage: "shield.fill")
+                                    .foregroundColor(ThemeManager.textColor)
+                            }
+                            .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                        }
                     }
                     
-                    NavigationLink(destination: Text("Help & Support")) {
-                        Label("Help & Support", systemImage: "questionmark.circle")
+                    Section(header: Text("Account").foregroundColor(ThemeManager.textColor)) {
+                        NavigationLink(destination: EditProfileView()) {
+                            Label("Edit Profile", systemImage: "person.circle")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                        
+                        NavigationLink(destination: NotificationSettingsView()) {
+                            Label("Notifications", systemImage: "bell")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                        
+                        NavigationLink(destination: PrivacySettingsView()) {
+                            Label("Privacy", systemImage: "lock")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                     
-                    NavigationLink(destination: Text("About")) {
-                        Label("About", systemImage: "info.circle")
+                    Section(header: Text("App").foregroundColor(ThemeManager.textColor)) {
+                        NavigationLink(destination: AppearanceSettingsView()) {
+                            Label("Appearance", systemImage: "paintbrush")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                        
+                        NavigationLink(destination: Text("Help & Support").foregroundColor(ThemeManager.textColor)) {
+                            Label("Help & Support", systemImage: "questionmark.circle")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                        
+                        NavigationLink(destination: Text("About").foregroundColor(ThemeManager.textColor)) {
+                            Label("About", systemImage: "info.circle")
+                                .foregroundColor(ThemeManager.textColor)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
+                    }
+                    
+                    Section {
+                        Button(action: { showingLogoutAlert = true }) {
+                            Label("Log Out", systemImage: "arrow.right.square")
+                                .foregroundColor(.red)
+                        }
+                        .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                     }
                 }
-                
-                Section {
-                    Button(action: { showingLogoutAlert = true }) {
-                        Label("Log Out", systemImage: "arrow.right.square")
-                            .foregroundColor(.red)
-                    }
-                }
+                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
+                        .foregroundColor(ThemeManager.brandPurple)
                 }
             }
             .alert("Log Out", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Log Out", role: .destructive) {
-                    Task {
-                        do {
-                            try await authManager.signOut()
-                        } catch {
-                            errorMessage = error.localizedDescription
-                            showingErrorAlert = true
-                        }
+                    do {
+                        try authManager.signOut()
+                    } catch {
+                        showingErrorAlert = true
+                        errorMessage = error.localizedDescription
                     }
                 }
             } message: {
@@ -75,7 +102,6 @@ struct SettingsView: View {
                 Text(errorMessage)
             }
         }
-        .accentColor(themeColor)
     }
 }
 
@@ -92,24 +118,32 @@ struct EditProfileView: View {
                     HStack {
                         Image(systemName: "person.circle.fill")
                             .font(.system(size: 60))
+                            .foregroundColor(ThemeManager.brandPurple)
                         
                         VStack(alignment: .leading) {
                             Text("Change Profile Photo")
                                 .font(.headline)
+                                .foregroundColor(ThemeManager.textColor)
                         }
                     }
-                    .foregroundColor(.primary)
                 }
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
             }
             
-            Section(header: Text("Profile Information")) {
+            Section(header: Text("Profile Information").foregroundColor(ThemeManager.textColor)) {
                 TextField("Name", text: $name)
+                    .foregroundColor(ThemeManager.textColor)
                 TextField("Bio", text: $bio)
+                    .foregroundColor(ThemeManager.textColor)
                 TextField("Email", text: $email)
                     .textContentType(.emailAddress)
                     .autocapitalization(.none)
+                    .foregroundColor(ThemeManager.textColor)
             }
+            .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
         }
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -124,17 +158,31 @@ struct NotificationSettingsView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("Notification Methods")) {
+            Section(header: Text("Notification Methods").foregroundColor(ThemeManager.textColor)) {
                 Toggle("Push Notifications", isOn: $pushEnabled)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
                 Toggle("Email Notifications", isOn: $emailEnabled)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
             }
+            .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
             
-            Section(header: Text("Notify Me About")) {
+            Section(header: Text("Notify Me About").foregroundColor(ThemeManager.textColor)) {
                 Toggle("New Finds", isOn: $newFindsEnabled)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
                 Toggle("Comments", isOn: $commentsEnabled)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
                 Toggle("Likes", isOn: $likesEnabled)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
             }
+            .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
         }
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -147,23 +195,35 @@ struct PrivacySettingsView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("Privacy")) {
+            Section(header: Text("Privacy").foregroundColor(ThemeManager.textColor)) {
                 Toggle("Private Account", isOn: $accountPrivate)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
                 Toggle("Show Location", isOn: $showLocation)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
                 Toggle("Allow Comments", isOn: $allowComments)
+                    .foregroundColor(ThemeManager.textColor)
+                    .tint(ThemeManager.brandPurple)
             }
+            .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
             
-            Section(header: Text("Data")) {
+            Section(header: Text("Data").foregroundColor(ThemeManager.textColor)) {
                 Button("Download My Data") {
                     // TODO: Implement data download
                 }
+                .foregroundColor(ThemeManager.brandPurple)
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
                 
                 Button("Delete Account") {
                     // TODO: Implement account deletion
                 }
                 .foregroundColor(.red)
+                .listRowBackground(ThemeManager.warmOverlay.opacity(0.05))
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(ThemeManager.backgroundStyle)
         .navigationTitle("Privacy")
         .navigationBarTitleDisplayMode(.inline)
     }

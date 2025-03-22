@@ -39,4 +39,18 @@ class FavoritesService: ObservableObject {
     func isFavorite(_ store: Store) -> Bool {
         favoriteStores.contains { $0.id == store.id }
     }
+    
+    // Helper method to toggle favorite status
+    func toggleFavorite(_ store: Store) {
+        if isFavorite(store) {
+            removeFavorite(store)
+        } else {
+            addFavorite(store)
+        }
+    }
+    
+    // Helper method to safely get a store by ID
+    func getStore(_ id: String) -> Store? {
+        favoriteStores.first { $0.id == id }
+    }
 } 

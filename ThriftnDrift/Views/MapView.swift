@@ -39,9 +39,11 @@ struct MapView: View {
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
+                    .tint(ThemeManager.brandPurple)
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 4)
+                .background(ThemeManager.warmOverlay.opacity(0.1))
                 
                 if let error = viewModel.errorMessage {
                     Text(error)
@@ -85,21 +87,41 @@ struct MapView: View {
                             Button(action: {
                                 showingStateSelector = true
                             }) {
-                                HStack {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(ThemeManager.brandPurple)
+                                    
                                     Text(viewModel.getAvailableStates().first { $0.code == viewModel.selectedState }?.name ?? "Select State")
-                                        .fontWeight(.medium)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(ThemeManager.textColor)
+                                    
+                                    Image(systemName: "chevron.up")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
-                                .background(themeColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(20)
-                                .shadow(radius: 2)
+                                .background(
+                                    ZStack {
+                                        Color.white
+                                        ThemeManager.warmOverlay.opacity(0.05)
+                                    }
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(ThemeManager.warmOverlay.opacity(0.2), lineWidth: 1)
+                                )
+                                .shadow(
+                                    color: ThemeManager.warmOverlay.opacity(0.1),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 4
+                                )
                             }
                             .padding(.trailing)
-                            .padding(.bottom, 8)
+                            .padding(.bottom, 16)
                             .scaleEffect(isTransitioning ? 0.95 : 1.0)
                             .animation(.spring(response: 0.3), value: isTransitioning)
                         }
@@ -107,6 +129,7 @@ struct MapView: View {
                 }
             }
             .navigationBarHidden(true)
+            .background(ThemeManager.backgroundStyle)
             .sheet(isPresented: $showingStateSelector) {
                 StateSelectionSheet(
                     selectedState: viewModel.selectedState,
@@ -378,9 +401,9 @@ struct MapContent: View {
                         .font(.system(size: 22))
                         .foregroundColor(.white)
                         .frame(width: 44, height: 44)
-                        .background(Color(red: 0.4, green: 0.5, blue: 0.95))
+                        .background(ThemeManager.brandPurple)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .shadow(color: ThemeManager.warmOverlay.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
                 .buttonStyle(ScaleButtonStyle())
                 
@@ -389,9 +412,9 @@ struct MapContent: View {
                         .font(.system(size: 22))
                         .foregroundColor(.white)
                         .frame(width: 44, height: 44)
-                        .background(Color(red: 0.4, green: 0.5, blue: 0.95))
+                        .background(ThemeManager.brandPurple)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .shadow(color: ThemeManager.warmOverlay.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
                 .buttonStyle(ScaleButtonStyle())
                 
@@ -403,9 +426,9 @@ struct MapContent: View {
                         .font(.system(size: 22))
                         .foregroundColor(.white)
                         .frame(width: 44, height: 44)
-                        .background(Color(red: 0.4, green: 0.5, blue: 0.95))
+                        .background(ThemeManager.brandPurple)
                         .clipShape(Circle())
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .shadow(color: ThemeManager.warmOverlay.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -463,23 +486,22 @@ struct ScaleButtonStyle: ButtonStyle {
 struct StoreAnnotation: View {
     let store: Store
     let isSelected: Bool
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
     
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
                 Circle()
-                    .fill(Color.white)
+                    .fill(ThemeManager.warmOverlay.opacity(0.1))
                     .frame(width: 44, height: 44)
-                    .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+                    .shadow(color: ThemeManager.warmOverlay.opacity(0.3), radius: 4, x: 0, y: 2)
                 
                 Circle()
-                    .stroke(themeColor, lineWidth: 2)
+                    .stroke(ThemeManager.brandPurple, lineWidth: 2)
                     .frame(width: 44, height: 44)
                 
                 Image(systemName: "storefront.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(themeColor)
+                    .foregroundColor(ThemeManager.brandPurple)
             }
             .scaleEffect(isSelected ? 1.2 : 1.0)
             .animation(.spring(response: 0.3), value: isSelected)
@@ -487,12 +509,12 @@ struct StoreAnnotation: View {
             if isSelected {
                 Text(store.name)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.black)
+                    .foregroundColor(ThemeManager.textColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.white)
+                    .background(ThemeManager.warmOverlay.opacity(0.1))
                     .cornerRadius(8)
-                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .shadow(color: ThemeManager.warmOverlay.opacity(0.2), radius: 3, x: 0, y: 1)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -506,17 +528,17 @@ struct ClusterAnnotation: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color(red: 0.4, green: 0.5, blue: 0.95))
+                .fill(ThemeManager.brandPurple)
                 .frame(width: 44, height: 44)
-                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+                .shadow(color: ThemeManager.warmOverlay.opacity(0.3), radius: 4, x: 0, y: 2)
             
             Circle()
-                .stroke(Color.white, lineWidth: 2)
+                .stroke(ThemeManager.warmOverlay.opacity(0.3), lineWidth: 2)
                 .frame(width: 44, height: 44)
             
             Text("\(count)")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(ThemeManager.warmOverlay)
         }
     }
 }
@@ -525,18 +547,175 @@ struct StoreDetailSheet: View {
     let store: Store
     @Environment(\.dismiss) private var dismiss
     @Binding var isPresented: Bool
+    @StateObject private var favoritesService = FavoritesService.shared
     @State private var showingPhotoSubmission = false
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    StoreImageView(imageUrls: store.imageUrls, imageAttribution: store.imageAttribution)
-                    StoreInfoView(store: store)
-                    ContactSection(store: store)
-                    ActionButtonsView(store: store)
+                VStack(spacing: 24) {
+                    // Store Image or Placeholder
+                    ZStack {
+                        if store.imageUrls.isEmpty {
+                            ZStack {
+                                Rectangle()
+                                    .fill(ThemeManager.warmOverlay.opacity(0.1))
+                                    .frame(height: 200)
+                                
+                                VStack(spacing: 12) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(ThemeManager.brandPurple)
+                                    
+                                    Text("No Photos Yet")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(ThemeManager.textColor)
+                                    
+                                    Text("Photos of this store will be added soon")
+                                        .font(.subheadline)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.7))
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal)
+                                }
+                            }
+                        } else {
+                            StoreImageView(imageUrls: store.imageUrls, imageAttribution: store.imageAttribution)
+                        }
+                    }
+                    .background(ThemeManager.warmOverlay.opacity(0.05))
                     
-                    // Add Photo Submission Button
+                    // Store Information
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Name and Basic Info
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(store.name)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(ThemeManager.textColor)
+                            
+                            Text(store.address)
+                                .font(.subheadline)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.7))
+                        }
+                        
+                        // Categories
+                        if !store.categories.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(store.categories, id: \.self) { category in
+                                        Text(category)
+                                            .font(.subheadline)
+                                            .foregroundColor(ThemeManager.textColor.opacity(0.8))
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(ThemeManager.warmOverlay.opacity(0.1))
+                                            .cornerRadius(12)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Store Features Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Store Features")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .foregroundColor(ThemeManager.textColor)
+                            
+                            HStack(spacing: 24) {
+                                if store.hasClothingSection {
+                                    FeatureItem(icon: "tshirt", text: "Clothing", isActive: true)
+                                }
+                                if store.hasFurnitureSection {
+                                    FeatureItem(icon: "chair", text: "Furniture", isActive: true)
+                                }
+                                if store.hasElectronicsSection {
+                                    FeatureItem(icon: "desktopcomputer", text: "Electronics", isActive: true)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        
+                        // Contact Section
+                        if store.phoneNumber != nil || store.website != nil {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Contact")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(ThemeManager.textColor)
+                                
+                                if let phone = store.phoneNumber,
+                                   let phoneURL = URL(string: "tel:\(phone)") {
+                                    Link(destination: phoneURL) {
+                                        HStack {
+                                            Image(systemName: "phone")
+                                            Text(phone)
+                                        }
+                                        .foregroundColor(ThemeManager.brandPurple)
+                                    }
+                                }
+                                
+                                if let website = store.website,
+                                   let websiteURL = URL(string: website) {
+                                    Link(destination: websiteURL) {
+                                        HStack {
+                                            Image(systemName: "globe")
+                                            Text(website)
+                                                .lineLimit(1)
+                                        }
+                                        .foregroundColor(ThemeManager.brandPurple)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Action Buttons
+                    HStack(spacing: 20) {
+                        Button(action: {
+                            if let url = URL(string: "maps://?address=\(store.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "map")
+                                Text("Directions")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(ThemeManager.brandPurple)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        
+                        Button(action: {
+                            withAnimation {
+                                favoritesService.toggleFavorite(store)
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: favoritesService.isFavorite(store) ? "heart.fill" : "heart")
+                                Text(favoritesService.isFavorite(store) ? "Favorited" : "Favorite")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                favoritesService.isFavorite(store) ?
+                                ThemeManager.brandLightPurple : ThemeManager.warmOverlay.opacity(0.1)
+                            )
+                            .foregroundColor(
+                                favoritesService.isFavorite(store) ?
+                                .white : ThemeManager.brandPurple
+                            )
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Submit Photos Button
                     Button(action: {
                         showingPhotoSubmission = true
                     }) {
@@ -545,21 +724,22 @@ struct StoreDetailSheet: View {
                             Text("Submit Store Photos")
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .foregroundColor(.primary)
+                        .padding(.vertical, 12)
+                        .background(ThemeManager.warmOverlay.opacity(0.1))
+                        .foregroundColor(ThemeManager.textColor)
                         .cornerRadius(12)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
                 }
-                .padding()
             }
+            .background(ThemeManager.backgroundStyle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
+                            .foregroundColor(ThemeManager.textColor.opacity(0.6))
                             .font(.system(size: 24))
                     }
                 }
@@ -630,44 +810,33 @@ struct StoreImageView: View {
     
     private var defaultStoreImage: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.1),
-                    Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.2)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Rectangle()
+                .fill(ThemeManager.warmOverlay.opacity(0.1))
+                .frame(height: 200)
             
             VStack(spacing: 12) {
-                // Store icon
-                Image(systemName: "storefront.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 60, height: 60)
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(ThemeManager.brandPurple)
                 
-                // Engaging message
-                VStack(spacing: 4) {
-                    Text("Coming Soon!")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text("Store photos will be added as they become available")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                Text("No Photos Yet")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(ThemeManager.textColor)
+                
+                Text("Photos of this store will be added soon")
+                    .font(.subheadline)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
-            .padding()
         }
         .frame(height: 200)
         .frame(maxWidth: .infinity)
-        .background(Color(UIColor.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.4, green: 0.5, blue: 0.95).opacity(0.3), lineWidth: 1)
+                .stroke(ThemeManager.brandPurple.opacity(0.3), lineWidth: 1)
         )
     }
 }
@@ -894,51 +1063,80 @@ struct StateSelectionSheet: View {
     let selectedState: String
     let states: [(code: String, name: String)]
     let onStateSelected: (String) -> Void
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
-            Text("Select State")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.vertical, 20)
+            // Header
+            VStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(ThemeManager.textColor.opacity(0.3))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+                
+                Text("Select State")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(ThemeManager.textColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(ThemeManager.warmOverlay.opacity(0.05))
             
+            // States Grid
             ScrollView {
-                VStack(spacing: 0) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ],
+                    spacing: 12
+                ) {
                     ForEach(states, id: \.code) { state in
                         Button(action: {
                             onStateSelected(state.code)
                         }) {
-                            HStack {
+                            VStack(spacing: 4) {
+                                Text(state.code)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(state.code == selectedState ? .white : ThemeManager.textColor)
                                 Text(state.name)
-                                    .font(.title3)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                if state.code == selectedState {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(themeColor)
-                                        .font(.system(size: 20, weight: .medium))
-                                }
+                                    .font(.system(size: 12))
+                                    .foregroundColor(state.code == selectedState ? .white.opacity(0.9) : ThemeManager.textColor.opacity(0.7))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                             .background(
-                                state.code == selectedState ?
-                                themeColor.opacity(0.1) :
-                                Color.clear
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(state.code == selectedState ? ThemeManager.brandPurple : Color.white)
+                                    .shadow(
+                                        color: state.code == selectedState ? 
+                                            ThemeManager.brandPurple.opacity(0.3) : 
+                                            ThemeManager.warmOverlay.opacity(0.1),
+                                        radius: 4,
+                                        x: 0,
+                                        y: 2
+                                    )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        state.code == selectedState ?
+                                            Color.clear :
+                                            ThemeManager.warmOverlay.opacity(0.2),
+                                        lineWidth: 1
+                                    )
                             )
                         }
-                        
-                        if state.code != states.last?.code {
-                            Divider()
-                                .padding(.horizontal, 24)
-                        }
+                        .buttonStyle(ScaleButtonStyle())
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(16)
             }
         }
-        .background(Color(UIColor.systemBackground))
+        .background(ThemeManager.backgroundStyle)
     }
 }
 
@@ -958,7 +1156,7 @@ struct StoreListContent: View {
             }
             .padding()
         }
-        .background(Color(UIColor.systemGray6))
+        .background(ThemeManager.backgroundStyle)
     }
 }
 
@@ -970,32 +1168,37 @@ struct StoreListItem: View {
             // Store icon
             ZStack {
                 Circle()
-                    .fill(Color.white)
+                    .fill(ThemeManager.warmOverlay.opacity(0.1))
                     .frame(width: 50, height: 50)
-                    .shadow(color: Color.black.opacity(0.1), radius: 2)
+                    .shadow(color: ThemeManager.warmOverlay.opacity(0.2), radius: 3)
                 
                 Image(systemName: "bag.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                    .foregroundColor(ThemeManager.brandPurple)
             }
             
             // Store info
             VStack(alignment: .leading, spacing: 4) {
                 Text(store.name)
                     .font(.headline)
+                    .foregroundColor(ThemeManager.textColor)
                 Text(store.address)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.7))
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
+                .foregroundColor(ThemeManager.brandPurple.opacity(0.7))
         }
         .padding()
         .background(Color.white)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ThemeManager.warmOverlay.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: ThemeManager.warmOverlay.opacity(0.1), radius: 3)
     }
 } 

@@ -30,6 +30,10 @@ struct SocialLoginButton: View {
             .background(backgroundColor)
             .foregroundColor(textColor)
             .cornerRadius(27)
+            .overlay(
+                RoundedRectangle(cornerRadius: 27)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: backgroundColor == .white ? 1 : 0)
+            )
         }
     }
 }
@@ -45,12 +49,14 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            Color(UIColor.systemGray6)
+            // Background with warm gradient
+            ThemeManager.backgroundStyle
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Text("Welcome Back!")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(ThemeManager.textColor)
                     .padding(.top, 60)
                     .padding(.bottom, 40)
                     .opacity(isAnimating ? 1 : 0)
@@ -76,10 +82,6 @@ struct LoginView: View {
                     ) {
                         // Handle Google login
                     }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 27)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
                     .opacity(isAnimating ? 1 : 0)
                     .offset(y: isAnimating ? 0 : 20)
                 }
@@ -87,7 +89,7 @@ struct LoginView: View {
                 
                 Text("OR LOG IN WITH EMAIL")
                     .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     .padding(.top, 32)
                     .padding(.bottom, 24)
                     .opacity(isAnimating ? 1 : 0)
@@ -99,11 +101,11 @@ struct LoginView: View {
                         .keyboardType(.emailAddress)
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -112,11 +114,11 @@ struct LoginView: View {
                         .textFieldStyle(PlainTextFieldStyle())
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -134,7 +136,7 @@ struct LoginView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(Color(red: 0.4, green: 0.5, blue: 0.95))
+                            .background(ThemeManager.brandPurple)
                             .foregroundColor(.white)
                             .cornerRadius(27)
                     }
@@ -145,7 +147,7 @@ struct LoginView: View {
                     Button(action: { }) {
                         Text("Forgot Password?")
                             .font(.system(size: 14))
-                            .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                            .foregroundColor(ThemeManager.brandPurple)
                     }
                     .padding(.top, 16)
                     .opacity(isAnimating ? 1 : 0)
@@ -157,7 +159,7 @@ struct LoginView: View {
                 HStack(spacing: 4) {
                     Text("DON'T HAVE AN ACCOUNT?")
                         .font(.system(size: 12))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     
                     Button(action: {
                         withAnimation(.easeOut(duration: 0.2)) {
@@ -167,7 +169,7 @@ struct LoginView: View {
                     }) {
                         Text("SIGN UP")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                            .foregroundColor(ThemeManager.brandPurple)
                     }
                 }
                 .padding(.bottom, 48)
@@ -188,7 +190,7 @@ struct LoginView: View {
                         Text("Back")
                             .font(.system(size: 16, weight: .regular))
                     }
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
             }
         }

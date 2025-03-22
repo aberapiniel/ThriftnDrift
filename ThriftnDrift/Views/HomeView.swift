@@ -1,5 +1,98 @@
 import SwiftUI
 
+struct ThemeManager {
+    // Base colors
+    static let mainThemeColor = Color(red: 0.82, green: 0.47, blue: 0.35) // Terracotta
+    static let secondaryColor = Color(red: 0.85, green: 0.80, blue: 0.75) // Taupe
+    static let backgroundColor = Color(red: 0.96, green: 0.94, blue: 0.92) // Cream
+    static let accentColor = Color(red: 0.95, green: 0.85, blue: 0.75) // Warm sand
+    static let textColor = Color(red: 0.2, green: 0.2, blue: 0.2).opacity(0.85) // Soft black
+    
+    // Brand colors
+    static let brandPurple = Color(red: 0.40, green: 0.42, blue: 0.97) // Brighter purple
+    static let brandLightPurple = Color(red: 0.53, green: 0.55, blue: 0.98) // Light purple
+    
+    // Warm overlay
+    static let warmOverlay = Color(red: 0.98, green: 0.92, blue: 0.87)
+    
+    // Tab Bar styles
+    static func updateTabBarAppearance(forProfile: Bool) {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        
+        // Create gradient colors
+        let gradientLayer = CAGradientLayer()
+        gradientLayer.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 49) // Standard tab bar height
+        gradientLayer.colors = [
+            UIColor(backgroundColor).cgColor,
+            UIColor(mainThemeColor.opacity(0.95)).cgColor
+        ]
+        gradientLayer.startPoint = CGPoint(x: 0, y: 0)
+        gradientLayer.endPoint = CGPoint(x: 1, y: 0)
+        
+        // Convert gradient to image
+        let renderer = UIGraphicsImageRenderer(bounds: gradientLayer.bounds)
+        let gradientImage = renderer.image { ctx in
+            gradientLayer.render(in: ctx.cgContext)
+        }
+        
+        // Apply gradient background
+        appearance.backgroundImage = gradientImage
+        
+        // Style the items
+        let itemAppearance = UITabBarItemAppearance()
+        
+        // Selected state
+        itemAppearance.selected.iconColor = .white
+        itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.white]
+        
+        // Normal state
+        itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.7)
+        itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.7)]
+        
+        appearance.stackedLayoutAppearance = itemAppearance
+        
+        UITabBar.appearance().standardAppearance = appearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
+    
+    // Common styles
+    static func applyWarmGradient(color: Color) -> some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                color.opacity(0.6),
+                color.opacity(0.3),
+                warmOverlay.opacity(0.4)
+            ]),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    static var backgroundStyle: some View {
+        ZStack {
+            backgroundColor
+            
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    mainThemeColor.opacity(0.1),
+                    brandLightPurple.opacity(0.05),
+                    accentColor.opacity(0.15),
+                    mainThemeColor.opacity(0.08)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            Rectangle()
+                .fill(backgroundColor.opacity(0.6))
+                .background(.ultraThinMaterial)
+        }
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @EnvironmentObject private var userService: UserService
@@ -7,8 +100,16 @@ struct HomeView: View {
     @State private var isAnimating = false
     @State private var showSubmitStore = false
     @State private var selectedCategory: String?
+    @State private var gradientAngle: Double = 0
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
+    // Remove the color definitions and use ThemeManager instead
+    private let mainThemeColor = ThemeManager.mainThemeColor
+    private let secondaryColor = ThemeManager.secondaryColor
+    private let backgroundColor = ThemeManager.backgroundColor
+    private let accentColor = ThemeManager.accentColor
+    private let textColor = ThemeManager.textColor
+    private let brandPurple = ThemeManager.brandPurple
+    private let brandLightPurple = ThemeManager.brandLightPurple
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -36,21 +137,17 @@ struct HomeView: View {
                 }
                 .tag(3)
             
-            if userService.isAdmin {
-                NavigationView {
-                    AdminView()
-                }
-                .tabItem {
-                    Label("Admin", systemImage: "shield")
-                }
-                .tag(4)
+            NavigationView {
+                ProfileView()
             }
-            
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person")
-                }
-                .tag(userService.isAdmin ? 5 : 4)
+            .tabItem {
+                Label("Profile", systemImage: "person")
+            }
+            .tag(4)
+        }
+        .onChange(of: selectedTab) { _ in
+            // Always use the gradient appearance regardless of selected tab
+            ThemeManager.updateTabBarAppearance(forProfile: true)
         }
         .sheet(isPresented: $showSubmitStore) {
             SubmitStoreView()
@@ -60,9 +157,12 @@ struct HomeView: View {
             withAnimation(.easeOut(duration: 0.5)) {
                 isAnimating = true
             }
-        }
-        .onDisappear {
-            isAnimating = false
+            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                gradientAngle = 360
+            }
+            
+            // Set gradient appearance on launch
+            ThemeManager.updateTabBarAppearance(forProfile: true)
         }
     }
     
@@ -77,12 +177,15 @@ struct HomeView: View {
                         HStack(spacing: 4) {
                             Text("Thrift")
                                 .font(.system(size: 24, weight: .bold, design: .monospaced))
+                                .foregroundColor(textColor)
                             Image("ThriftDriftLogo")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(height: 20)
+                                .colorMultiply(brandPurple) // Tint logo with brand purple
                             Text("Drift")
                                 .font(.system(size: 24, weight: .bold, design: .monospaced))
+                                .foregroundColor(textColor)
                         }
                         Spacer()
                     }
@@ -90,22 +193,23 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Good \(timeOfDay), \(userName)")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.black)
+                            .foregroundColor(textColor)
                         
                         Text("Ready to find your next thrift?")
                             .font(.system(size: 18, weight: .regular))
-                            .foregroundColor(.gray)
+                            .foregroundColor(textColor.opacity(0.7))
                     }
                 }
                 .padding(.top, 16)
                 .opacity(isAnimating ? 1 : 0)
                 .offset(y: isAnimating ? 0 : 20)
                 
-                // Today's Top Picks Section
+                // Today's Top Picks Section with purple accent
                 CategoryCard(
                     title: "Today's Top Picks",
-                    color: Color(red: 0.93, green: 0.79, blue: 0.62),
+                    color: todaysTopPicksColor,
                     icon: "star.fill",
+                    accentColor: brandPurple,
                     subcategories: [
                         "Trending Stores",
                         "Top-rated Stores",
@@ -119,8 +223,9 @@ struct HomeView: View {
                 // Store Categories Section
                 CategoryCard(
                     title: "Store Categories",
-                    color: Color(red: 0.7, green: 0.85, blue: 0.9),
+                    color: storeCategoriesColor,
                     icon: "tag.fill",
+                    accentColor: brandPurple,
                     subcategories: [
                         "Vintage & Retro",
                         "Budget Friendly",
@@ -135,8 +240,9 @@ struct HomeView: View {
                 // For You Section
                 CategoryCard(
                     title: "For You",
-                    color: Color(red: 0.9, green: 0.8, blue: 0.9),
+                    color: forYouColor,
                     icon: "heart.fill",
+                    accentColor: brandPurple,
                     subcategories: [
                         "Recommended",
                         "Based on Your Likes",
@@ -149,7 +255,7 @@ struct HomeView: View {
                 
                 Spacer()
                 
-                // Submit Store Button at the bottom
+                // Submit Store Button with purple gradient
                 Button(action: {
                     showSubmitStore = true
                 }) {
@@ -161,7 +267,13 @@ struct HomeView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(themeColor)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [brandPurple, brandLightPurple]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .foregroundColor(.white)
                     .cornerRadius(25)
                 }
@@ -171,6 +283,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 24)
         }
+        .background(ThemeManager.backgroundStyle)
         .navigationBarHidden(true)
     }
     
@@ -187,81 +300,53 @@ struct HomeView: View {
     private var userName: String {
         authManager.userDisplayName
     }
+    
+    // Update CategoryCard colors
+    private var todaysTopPicksColor: Color {
+        accentColor // Warm sand
+    }
+    
+    private var storeCategoriesColor: Color {
+        secondaryColor // Taupe
+    }
+    
+    private var forYouColor: Color {
+        Color(red: 0.90, green: 0.82, blue: 0.78) // Dusty rose
+    }
 }
 
 struct CategoryCard: View {
     let title: String
     let color: Color
     let icon: String
+    let accentColor: Color
     let subcategories: [String]
     
-    var body: some View {
-        NavigationLink(destination: CategoryDetailView(title: title, color: color, icon: icon, subcategories: subcategories)) {
-            ZStack(alignment: .trailing) {
-                // Content
-                HStack {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: icon)
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.black)
-                            Spacer()
-                        }
-                        
-                        Text(title)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.black)
-                            .multilineTextAlignment(.leading)
-                        
-                        HStack {
-                            Text("Explore")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.black)
-                                .cornerRadius(15)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.black)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // Decorative Icons
-                    ZStack {
-                        ForEach(categoryIcons, id: \.self) { iconName in
-                            Image(systemName: iconName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 30, height: 30)
-                                .offset(x: offsetFor(icon: iconName), y: offsetFor(icon: iconName, isVertical: true))
-                                .opacity(0.3)
-                        }
-                    }
-                    .frame(width: 120)
-                    .padding(.trailing, 20)
-                }
-            }
-            .frame(height: 160)
-            .background(color)
-            .cornerRadius(20)
+    private let exploreButtonColor = Color(red: 0.45, green: 0.45, blue: 0.5) // Muted slate
+    
+    private var backgroundImage: String {
+        switch title {
+        case "Today's Top Picks":
+            return "TopPicks"
+        case "Store Categories":
+            return "Categories"
+        case "For You":
+            return "ForYou"
+        default:
+            return ""
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
     private var categoryIcons: [String] {
         switch title {
         case "Today's Top Picks":
-            return ["star.fill", "flame.fill", "crown.fill", "sparkles"]
+            return ["star.fill", "crown.fill", "flame.fill", "sparkles"]
         case "Store Categories":
-            return ["tag.fill", "handbag.fill", "tshirt.fill", "house.fill"]
+            return ["tshirt.fill", "house.fill", "handbag.fill", "tag.fill"]
         case "For You":
             return ["heart.fill", "star.fill", "hand.thumbsup.fill", "bookmark.fill"]
         default:
-            return ["circle.fill"]
+            return []
         }
     }
     
@@ -273,6 +358,94 @@ struct CategoryCard: View {
             return cos(index * .pi / 2) * 20
         }
     }
+    
+    var body: some View {
+        NavigationLink(destination: CategoryDetailView(title: title, color: color, icon: icon, subcategories: subcategories)) {
+            ZStack(alignment: .leading) {
+                // Background Image with warm vintage overlay
+                ZStack {
+                    Image(backgroundImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 160)
+                        .overlay(
+                            // Warmer vintage filter
+                            Color(red: 0.98, green: 0.92, blue: 0.87)
+                                .opacity(0.25)
+                        )
+                    
+                    // Original color overlay with increased warmth
+                    color
+                        .opacity(0.4)
+                        .blendMode(.overlay)
+                    
+                    // Theme gradient with warmer tones
+                    ThemeManager.applyWarmGradient(color: color)
+                    
+                    // Decorative Icons
+                    HStack {
+                        Spacer()
+                        ZStack {
+                            ForEach(categoryIcons, id: \.self) { iconName in
+                                Image(systemName: iconName)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 24, height: 24)
+                                    .offset(
+                                        x: offsetFor(icon: iconName),
+                                        y: offsetFor(icon: iconName, isVertical: true)
+                                    )
+                                    .foregroundColor(accentColor)
+                                    .opacity(0.3)
+                            }
+                        }
+                        .frame(width: 100)
+                        .padding(.trailing, 20)
+                    }
+                }
+                .clipped()
+                
+                // Content with soft shadows
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(accentColor)
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                        Spacer()
+                    }
+                    
+                    Text(title)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(ThemeManager.textColor)
+                        .shadow(color: Color.white.opacity(0.6), radius: 2, x: 0, y: 1)
+                        .multilineTextAlignment(.leading)
+                    
+                    Spacer()
+                    
+                    HStack {
+                        Text("Explore")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(exploreButtonColor.opacity(0.9))
+                            .cornerRadius(15)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(accentColor)
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+                .padding(20)
+            }
+            .frame(height: 160)
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
 }
 
 struct CategoryDetailView: View {
@@ -282,8 +455,6 @@ struct CategoryDetailView: View {
     let subcategories: [String]
     @Environment(\.dismiss) private var dismiss
     
-    private let themeColor = Color(red: 0.4, green: 0.5, blue: 0.95)
-    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -292,19 +463,27 @@ struct CategoryDetailView: View {
                     HStack {
                         Image(systemName: icon)
                             .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(ThemeManager.brandPurple)
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         Text(title)
                             .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(ThemeManager.textColor)
                     }
                     .frame(maxWidth: .infinity)
-                    .foregroundColor(.black)
                     
                     Text("Select a category to explore")
                         .font(.system(size: 16))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.7))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
-                .background(color)
+                .background(
+                    ZStack {
+                        color
+                        ThemeManager.warmOverlay.opacity(0.15)
+                        ThemeManager.applyWarmGradient(color: color)
+                    }
+                )
                 
                 // Subcategories
                 VStack(spacing: 12) {
@@ -314,23 +493,28 @@ struct CategoryDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(subcategory)
                                         .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(ThemeManager.textColor)
                                     
-                                    // Add descriptive text based on subcategory
                                     Text(descriptionFor(subcategory))
                                         .font(.system(size: 14))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.7))
                                 }
                                 
                                 Spacer()
                                 
                                 Image(systemName: "chevron.right")
-                                    .foregroundColor(themeColor)
+                                    .foregroundColor(ThemeManager.brandPurple)
                                     .font(.system(size: 14, weight: .semibold))
+                                    .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                             }
                             .padding(.vertical, 16)
                             .padding(.horizontal, 20)
-                            .background(Color.white)
+                            .background(
+                                ZStack {
+                                    Color.white
+                                    ThemeManager.warmOverlay.opacity(0.05)
+                                }
+                            )
                             .cornerRadius(12)
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                         }
@@ -340,7 +524,7 @@ struct CategoryDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(UIColor.systemGray6))
+        .background(ThemeManager.backgroundStyle)
     }
     
     private func descriptionFor(_ subcategory: String) -> String {
@@ -396,12 +580,21 @@ struct CategoryStoreListView: View {
                     NavigationLink(destination: StoreDetailView(store: store)) {
                         StoreRow(store: store)
                             .padding(.horizontal)
+                            .background(
+                                ZStack {
+                                    Color.white
+                                    ThemeManager.warmOverlay.opacity(0.05)
+                                }
+                                .cornerRadius(15)
+                            )
+                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                     }
                 }
             }
             .padding(.vertical)
         }
         .navigationTitle(category)
+        .background(ThemeManager.backgroundStyle)
     }
 }
 
@@ -425,13 +618,19 @@ struct CustomTabBar: View {
             }
         }
         .padding(.vertical, 8)
-        .background(Color.white)
+        .background(
+            ZStack {
+                Color.white
+                ThemeManager.warmOverlay.opacity(0.1)
+            }
+        )
         .overlay(
             Rectangle()
                 .frame(height: 1)
-                .foregroundColor(Color.gray.opacity(0.2)),
+                .foregroundColor(ThemeManager.mainThemeColor.opacity(0.1)),
             alignment: .top
         )
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: -2)
     }
     
     private func tabIcon(for index: Int) -> String {
@@ -468,11 +667,19 @@ struct TabBarButton: View {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
+                    .foregroundColor(isSelected ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.6))
+                    .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                 Text(title)
                     .font(.system(size: 12))
+                    .foregroundColor(isSelected ? ThemeManager.brandPurple : ThemeManager.textColor.opacity(0.6))
             }
-            .foregroundColor(isSelected ? Color(red: 0.4, green: 0.5, blue: 0.95) : .gray)
             .frame(maxWidth: .infinity)
+            .background(
+                isSelected ?
+                ThemeManager.warmOverlay.opacity(0.15) :
+                Color.clear
+            )
+            .cornerRadius(10)
         }
     }
 } 

@@ -288,7 +288,16 @@ class StoreService: ObservableObject {
                     print("📦 WARNING: Filtering out store '\(store.name)' due to invalid coordinates (\(store.latitude),\(store.longitude))")
                     return false
                 }
-                return store.state.uppercased() == selectedState.uppercased()
+                
+                // Ensure store belongs to current state
+                let storeState = store.state.uppercased()
+                let currentState = selectedState.uppercased()
+                if storeState != currentState {
+                    print("📦 WARNING: Filtering out store '\(store.name)' due to state mismatch (store: \(storeState), current: \(currentState))")
+                    return false
+                }
+                
+                return true
             }
         
         // Update the published stores array
@@ -376,20 +385,34 @@ class StoreService: ObservableObject {
             .sorted { $0.name < $1.name } ?? []
     }
     
-    func getNearbyStores(latitude: Double, longitude: Double, radiusInMeters: Double = 50000) -> [Store] {
+    func getNearbyStores(latitude: Double, longitude: Double, radiusInMeters: Double = 50000, state: String? = nil) -> [Store] {
         let location = CLLocation(latitude: latitude, longitude: longitude)
         return stores.filter { store in
+            // First check state if provided
+            if let state = state, store.state.uppercased() != state.uppercased() {
+                return false
+            }
+            
+            // Then check distance
             let storeLocation = CLLocation(latitude: store.latitude, longitude: store.longitude)
             return location.distance(from: storeLocation) <= radiusInMeters
         }
     }
     
-    func searchStores(query: String) -> [Store] {
-        if query.isEmpty { return stores }
+    func searchStores(query: String, state: String? = nil) -> [Store] {
+        if query.isEmpty {
+            return state != nil ? stores.filter { $0.state.uppercased() == state!.uppercased() } : stores
+        }
         return stores.filter { store in
-            store.name.localizedCaseInsensitiveContains(query) ||
-            store.address.localizedCaseInsensitiveContains(query) ||
-            store.categories.contains { $0.localizedCaseInsensitiveContains(query) }
+            // First check state if provided
+            if let state = state, store.state.uppercased() != state.uppercased() {
+                return false
+            }
+            
+            // Then check search criteria
+            return store.name.localizedCaseInsensitiveContains(query) ||
+                   store.address.localizedCaseInsensitiveContains(query) ||
+                   store.categories.contains { $0.localizedCaseInsensitiveContains(query) }
         }
     }
     

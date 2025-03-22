@@ -14,12 +14,14 @@ struct SignUpView: View {
     
     var body: some View {
         ZStack {
-            Color(UIColor.systemGray6)
+            // Background with warm gradient
+            ThemeManager.backgroundStyle
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 Text("Create your account")
                     .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(ThemeManager.textColor)
                     .padding(.top, 60)
                     .padding(.bottom, 40)
                     .opacity(isAnimating ? 1 : 0)
@@ -45,10 +47,6 @@ struct SignUpView: View {
                     ) {
                         // Handle Google signup
                     }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 27)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
                     .opacity(isAnimating ? 1 : 0)
                     .offset(y: isAnimating ? 0 : 20)
                 }
@@ -56,7 +54,7 @@ struct SignUpView: View {
                 
                 Text("OR SIGN UP WITH EMAIL")
                     .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     .padding(.top, 32)
                     .padding(.bottom, 24)
                     .opacity(isAnimating ? 1 : 0)
@@ -67,11 +65,11 @@ struct SignUpView: View {
                         .autocapitalization(.words)
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -81,11 +79,11 @@ struct SignUpView: View {
                         .autocapitalization(.words)
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -96,11 +94,11 @@ struct SignUpView: View {
                         .keyboardType(.emailAddress)
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -109,11 +107,11 @@ struct SignUpView: View {
                         .textFieldStyle(PlainTextFieldStyle())
                         .padding()
                         .frame(height: 54)
-                        .background(Color.white)
+                        .background(Color.white.opacity(0.8))
                         .cornerRadius(27)
                         .overlay(
                             RoundedRectangle(cornerRadius: 27)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                .stroke(ThemeManager.mainThemeColor.opacity(0.2), lineWidth: 1)
                         )
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -131,7 +129,7 @@ struct SignUpView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(Color(red: 0.4, green: 0.5, blue: 0.95))
+                            .background(ThemeManager.brandPurple)
                             .foregroundColor(.white)
                             .cornerRadius(27)
                     }
@@ -146,7 +144,7 @@ struct SignUpView: View {
                 HStack(spacing: 4) {
                     Text("ALREADY HAVE AN ACCOUNT?")
                         .font(.system(size: 12))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                     
                     Button(action: {
                         withAnimation(.easeOut(duration: 0.2)) {
@@ -156,7 +154,7 @@ struct SignUpView: View {
                     }) {
                         Text("LOG IN")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                            .foregroundColor(ThemeManager.brandPurple)
                     }
                 }
                 .padding(.bottom, 48)
@@ -177,7 +175,7 @@ struct SignUpView: View {
                         Text("Back")
                             .font(.system(size: 16, weight: .regular))
                     }
-                    .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.95))
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
             }
         }

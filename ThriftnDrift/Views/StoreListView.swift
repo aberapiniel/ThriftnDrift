@@ -114,48 +114,58 @@ struct StoreRow: View {
     let store: Store
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Store name
             Text(store.name)
-                .font(.headline)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(ThemeManager.textColor)
             
+            // Address
             Text(store.address)
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(ThemeManager.textColor.opacity(0.7))
             
+            // Rating and Price
             HStack {
                 if store.rating > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
                             .foregroundColor(.yellow)
                         Text(String(format: "%.1f", store.rating))
+                            .foregroundColor(ThemeManager.textColor)
                         Text("(\(store.reviewCount))")
-                            .foregroundColor(.gray)
+                            .foregroundColor(ThemeManager.textColor.opacity(0.7))
                     }
                 }
                 
                 Spacer()
                 
                 Text(store.priceRange)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.7))
             }
             .font(.subheadline)
             
+            // Categories
             if !store.categories.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(store.categories, id: \.self) { category in
                             Text(category)
                                 .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(8)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.8))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(ThemeManager.warmOverlay.opacity(0.1))
+                                .cornerRadius(12)
                         }
                     }
+                    .padding(.horizontal, 2) // Prevent categories from touching the edges
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 20)
     }
 }
 

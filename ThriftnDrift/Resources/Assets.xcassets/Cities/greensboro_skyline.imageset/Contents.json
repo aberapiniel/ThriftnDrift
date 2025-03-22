@@ -1,17 +1,8 @@
 {
   "images": [
     {
-      "filename": "greensboro_skyline.jpg",
-      "idiom": "universal",
-      "scale": "1x"
-    },
-    {
-      "idiom": "universal",
-      "scale": "2x"
-    },
-    {
-      "idiom": "universal",
-      "scale": "3x"
+      "filename": "Greensboro.jpeg",
+      "idiom": "universal"
     }
   ],
   "info": {

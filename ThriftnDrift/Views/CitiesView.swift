@@ -8,6 +8,7 @@ struct CitiesView: View {
     @State private var selectedTags: Set<String> = []
     @State private var selectedCity: City?
     @State private var showingStateSelector = false
+    @State private var isStateTransitioning = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -28,29 +29,40 @@ struct CitiesView: View {
     ]
     
     var body: some View {
-        VStack(spacing: 16) {
-            // State selector button
-            Button(action: {
-                showingStateSelector = true
-            }) {
-                HStack {
-                    Text(citiesService.getAvailableStates().first { $0.code == citiesService.selectedState }?.name ?? "Select State")
-                        .fontWeight(.medium)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption)
+        VStack(spacing: 0) {
+            // State Selection ScrollView
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(citiesService.getAvailableStates(), id: \.code) { state in
+                        StateButton(
+                            name: state.name,
+                            code: state.code,
+                            isSelected: state.code == citiesService.selectedState,
+                            action: {
+                                withAnimation(.spring(response: 0.3)) {
+                                    isStateTransitioning = true
+                                    citiesService.loadCitiesForState(state.code)
+                                    storeService.switchToState(state.code)
+                                    Task {
+                                        await citiesService.updateStoreCounts()
+                                    }
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    isStateTransitioning = false
+                                }
+                            }
+                        )
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(themeColor)
-                .foregroundColor(.white)
-                .cornerRadius(20)
-                .shadow(radius: 2)
             }
-            .padding(.horizontal)
+            .background(ThemeManager.warmOverlay.opacity(0.05))
             
             // Search Bar
             SearchBar(text: $searchText)
                 .padding(.horizontal)
+                .padding(.top, 16)
             
             // Tags ScrollView
             ScrollView(.horizontal, showsIndicators: false) {
@@ -74,7 +86,7 @@ struct CitiesView: View {
             }
             .padding(.vertical, 8)
             
-            // Cities Grid
+            // Cities Grid with transition
             if filteredCities.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "magnifyingglass")
@@ -93,32 +105,53 @@ struct CitiesView: View {
                                 .onTapGesture {
                                     selectedCity = city
                                 }
+                                .opacity(isStateTransitioning ? 0 : 1)
+                                .animation(.easeInOut(duration: 0.3), value: isStateTransitioning)
                         }
                     }
                     .padding(.horizontal)
                 }
             }
         }
-        .padding(.vertical)
-        .background(Color(UIColor.systemGray6))
+        .background(ThemeManager.backgroundStyle)
         .navigationTitle("Cities")
         .sheet(item: $selectedCity) { city in
             CityDetailView(city: city)
         }
-        .sheet(isPresented: $showingStateSelector) {
-            StateSelectionSheet(
-                selectedState: citiesService.selectedState,
-                states: citiesService.getAvailableStates(),
-                onStateSelected: { stateCode in
-                    citiesService.loadCitiesForState(stateCode)
-                    storeService.switchToState(stateCode)
-                    Task {
-                        await citiesService.updateStoreCounts()
-                    }
-                    showingStateSelector = false
-                }
+    }
+}
+
+struct StateButton: View {
+    let name: String
+    let code: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text(code)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : ThemeManager.textColor)
+                Text(name)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white.opacity(0.9) : ThemeManager.textColor.opacity(0.7))
+            }
+            .frame(width: 80)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? ThemeManager.brandPurple : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                isSelected ? Color.clear : ThemeManager.textColor.opacity(0.2),
+                                lineWidth: 1
+                            )
+                    )
             )
-            .presentationDetents([.height(300)])
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+            .animation(.spring(response: 0.3), value: isSelected)
         }
     }
 }
@@ -134,10 +167,10 @@ struct TagButton: View {
                 .font(.system(size: 14, weight: .medium))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color(red: 0.4, green: 0.5, blue: 0.95) : Color.white)
-                .foregroundColor(isSelected ? .white : .primary)
+                .background(isSelected ? ThemeManager.brandPurple : ThemeManager.warmOverlay.opacity(0.05))
+                .foregroundColor(isSelected ? .white : ThemeManager.textColor)
                 .cornerRadius(20)
-                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                .shadow(color: ThemeManager.warmOverlay.opacity(0.2), radius: 2, x: 0, y: 1)
         }
     }
 }
@@ -147,30 +180,53 @@ struct CityCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // City Image
-            Image(city.imageUrl)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(height: 120)
-                .clipped()
-                .cornerRadius(12)
-                .overlay(
-                    LinearGradient(
-                        gradient: Gradient(colors: [.clear, .black.opacity(0.4)]),
-                        startPoint: .top,
-                        endPoint: .bottom
+            // City Image with enhanced gradient overlay
+            GeometryReader { geometry in
+                Image(city.imageUrl)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: 120)
+                    .scaledToFill()
+                    .clipped()
+                    .overlay(
+                        ZStack {
+                            // Bottom gradient for text readability
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    .clear,
+                                    ThemeManager.warmOverlay.opacity(0.3),
+                                    ThemeManager.warmOverlay.opacity(0.6)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            
+                            // Warm vintage overlay
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    ThemeManager.brandPurple.opacity(0.2),
+                                    ThemeManager.warmOverlay.opacity(0.15)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .blendMode(.overlay)
+                        }
                     )
                     .cornerRadius(12)
-                )
+            }
+            .frame(height: 120)
             
             // City Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(city.name)
                     .font(.headline)
+                    .foregroundColor(ThemeManager.textColor)
+                    .lineLimit(1)
                 
                 Text("\(city.storeCount) Stores")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ThemeManager.textColor.opacity(0.7))
                 
                 // Tags
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -178,9 +234,10 @@ struct CityCard: View {
                         ForEach(city.tags.prefix(3), id: \.self) { tag in
                             Text(tag)
                                 .font(.caption)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.8))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.1))
+                                .background(ThemeManager.warmOverlay.opacity(0.1))
                                 .cornerRadius(8)
                         }
                     }
@@ -191,7 +248,7 @@ struct CityCard: View {
         }
         .background(Color.white)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .shadow(color: ThemeManager.warmOverlay.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -205,19 +262,41 @@ struct CityDetailView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Hero Image
-                    Image(city.imageUrl)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 200)
-                        .clipped()
-                        .overlay(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.clear, .black.opacity(0.5)]),
-                                startPoint: .top,
-                                endPoint: .bottom
+                    // Hero Image with enhanced gradient overlay
+                    GeometryReader { geometry in
+                        Image(city.imageUrl)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width, height: 200)
+                            .scaledToFill()
+                            .clipped()
+                            .overlay(
+                                ZStack {
+                                    // Bottom gradient for text readability
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            .clear,
+                                            ThemeManager.warmOverlay.opacity(0.3),
+                                            ThemeManager.warmOverlay.opacity(0.6)
+                                        ]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                    
+                                    // Warm vintage overlay
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            ThemeManager.brandPurple.opacity(0.2),
+                                            ThemeManager.warmOverlay.opacity(0.15)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                    .blendMode(.overlay)
+                                }
                             )
-                        )
+                    }
+                    .frame(height: 200)
                     
                     VStack(alignment: .leading, spacing: 16) {
                         // City Info
@@ -225,14 +304,15 @@ struct CityDetailView: View {
                             Text(city.name)
                                 .font(.title)
                                 .fontWeight(.bold)
+                                .foregroundColor(ThemeManager.textColor)
                             
                             Text("\(stores.count) Thrift Stores")
                                 .font(.headline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.7))
                             
                             Text(city.description)
                                 .font(.body)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(ThemeManager.textColor.opacity(0.8))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         
@@ -244,7 +324,8 @@ struct CityDetailView: View {
                                         .font(.subheadline)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Color.gray.opacity(0.1))
+                                        .background(ThemeManager.warmOverlay.opacity(0.1))
+                                        .foregroundColor(ThemeManager.textColor)
                                         .cornerRadius(16)
                                 }
                             }
@@ -256,9 +337,10 @@ struct CityDetailView: View {
                                 Text("Popular Stores")
                                     .font(.title2)
                                     .fontWeight(.bold)
+                                    .foregroundColor(ThemeManager.textColor)
                                 Text("(Top 5)")
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ThemeManager.textColor.opacity(0.6))
                             }
                             
                             ForEach(stores.prefix(5)) { store in
@@ -266,6 +348,7 @@ struct CityDetailView: View {
                                     StoreRow(store: store)
                                 }
                                 Divider()
+                                    .background(ThemeManager.warmOverlay.opacity(0.1))
                             }
                             
                             // View All Stores Button
@@ -273,16 +356,17 @@ struct CityDetailView: View {
                                 HStack {
                                     Text("View All Stores")
                                         .font(.headline)
+                                        .foregroundColor(ThemeManager.textColor)
                                     Text("(\(stores.count))")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ThemeManager.textColor.opacity(0.6))
                                 }
                                 .padding()
-                                .background(Color.white)
+                                .background(ThemeManager.warmOverlay.opacity(0.05))
                                 .cornerRadius(12)
-                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                .shadow(color: ThemeManager.warmOverlay.opacity(0.1), radius: 2, x: 0, y: 1)
                             }
                             .buttonStyle(PlainButtonStyle())
                             .padding(.top, 24)
@@ -291,12 +375,14 @@ struct CityDetailView: View {
                     .padding()
                 }
             }
+            .background(ThemeManager.backgroundStyle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(ThemeManager.brandPurple)
                 }
             }
         }
